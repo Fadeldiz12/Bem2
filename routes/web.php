@@ -196,7 +196,6 @@ Route::middleware(['role:super_admin,admin'])->group(function () {
     Route::get('/proposal/{id}/rab', [KegiatanController::class, 'show'])->name('proposal.show');
     Route::post('/proposal', [KegiatanController::class, 'store'])->name('proposal.store');
     Route::put('/proposal/{kegiatan}/edit', [KegiatanController::class, 'update'])->name('proposal.update');
-    Route::delete('/proposal/{kegiatan}', [KegiatanController::class, 'destroy'])->name('proposal.destroy');
 
     Route::post('/proposal/tambah-sie', [SieController::class, 'store'])->name('Sie.store');
     Route::put('/proposal/edit-sie/{sie}', [SieController::class, 'update'])->name('Sie.update');
@@ -205,6 +204,13 @@ Route::middleware(['role:super_admin,admin'])->group(function () {
     Route::post('/proposal/tambah-item', [ItemController::class, 'store'])->name('Item.store');
     Route::put('/proposal/edit-item/{item}', [ItemController::class, 'update'])->name('Item.update');
     Route::delete('/proposal/hapus-item/{item}', [ItemController::class, 'destroy'])->name('Item.destroy');
+    Route::delete('/proposal/hapus-item-terpilih', [ItemController::class, 'destroySelected'])->name('Item.destroySelected');
+    Route::delete('/proposal/{kegiatan}/hapus-semua-item', [ItemController::class, 'destroyAllForKegiatan'])->name('Item.destroyAllForKegiatan');
+
+    // Diletakkan setelah route literal di atas ('/proposal/hapus-item-terpilih', dkk.)
+    // karena '{kegiatan}' adalah wildcard satu segmen — kalau didaftarkan lebih dulu,
+    // ia akan "menelan" request ke route literal tersebut duluan.
+    Route::delete('/proposal/{kegiatan}', [KegiatanController::class, 'destroy'])->name('proposal.destroy');
 
     Route::get('/proposal/{id}/export-pdf', [KegiatanController::class, 'exportPdfRab'])->name('proposal.export.pdf');
     Route::get('/proposal/{id}/export-excel', [KegiatanController::class, 'exportExcelRab'])->name('proposal.export.excel');

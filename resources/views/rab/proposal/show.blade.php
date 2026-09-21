@@ -48,12 +48,52 @@
             </div>
         </div>
 
+        <!-- Filter & Aksi Massal -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex flex-col sm:flex-row gap-3 flex-1">
+                <select id="filterSie" onchange="applyItemFilter()"
+                    class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600">
+                    <option value="">Semua Sie</option>
+                    @foreach ($sie as $s)
+                        <option value="{{ $s->ID_Sie }}">{{ $s->Nama_Sie }}</option>
+                    @endforeach
+                </select>
+                <input type="text" id="filterKeterangan" oninput="applyItemFilter()"
+                    placeholder="Cari keterangan item..."
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" id="bulkDeleteBtn" onclick="submitBulkDelete()" disabled
+                    class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                        </path>
+                    </svg>
+                    Hapus Terpilih (<span id="bulkDeleteCount">0</span>)
+                </button>
+                <button title="Hapus semua item pada proposal ini" type="button" onclick="confirmDeleteAllItems()"
+                    class="px-4 py-2 rounded-lg bg-red-800 hover:bg-red-900 text-white text-sm font-medium transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                        </path>
+                    </svg>
+                    Hapus Semua Item
+                </button>
+            </div>
+        </div>
+
         <!-- Table Content -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-purple-800 text-white text-sm">
+                            <th class="px-6 py-4 font-semibold w-10">
+                                <input type="checkbox" id="selectAllItems" onchange="toggleSelectAllItems(this)"
+                                    class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                            </th>
                             <th class="px-6 py-4 font-semibold w-16">No</th>
                             <th class="px-6 py-4 font-semibold">Keterangan</th>
                             <th class="px-6 py-4 font-semibold">Volume</th>
@@ -63,10 +103,10 @@
                             <th class="px-6 py-4 font-semibold text-center w-28">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="text-sm text-gray-700">
+                    <tbody class="text-sm text-gray-700" id="itemTableBody">
                         {{-- Kolom Sie --}}
                         @forelse ($sie as $index => $s)
-                            <tr class="bg-purple-200 border-b border-purple-300">
+                            <tr class="bg-purple-200 border-b border-purple-300 sie-row" data-sie-id="{{ $s->ID_Sie }}">
                                 <td colspan="8" class="px-6 py-3">
                                     <div class="flex items-center justify-between w-full">
                                         <span class="text-purple-900 font-bold text-sm uppercase tracking-wider">
@@ -116,7 +156,12 @@
                                 </td>
                             </tr>
                             @forelse ($s->items as $itemIndex => $item)
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition item-row"
+                                    data-sie-id="{{ $s->ID_Sie }}" data-keterangan="{{ strtolower($item->Keterangan) }}">
+                                    <td class="px-6 py-4">
+                                        <input type="checkbox" class="item-select-checkbox w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                            value="{{ $item->ID_Item }}" onchange="updateBulkDeleteButton()">
+                                    </td>
                                     <td class="px-6 py-4">{{ $itemIndex + 1 }}</td>
                                     <td class="px-6 py-4">{{ $item->Keterangan }}</td>
                                     <td class="px-6 py-4">{{ $item->Qty }}</td>
@@ -157,13 +202,13 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition sie-row" data-sie-id="{{ $s->ID_Sie }}">
                                     <td colspan="8" class="px-6 py-4 text-center text-gray-500">
                                         Belum ada item untuk Sie ini.
                                     </td>
                                 </tr>
                             @endforelse
-                            <tr class="bg-violet-300 border-b border-purple-300">
+                            <tr class="bg-violet-300 border-b border-purple-300 sie-row" data-sie-id="{{ $s->ID_Sie }}">
                                 <td colspan="8" class="px-6 py-3">
                                     <div class="flex items-center justify-end w-full">
                                         <span class="text-purple-900 font-bold text-sm uppercase tracking-wider">
@@ -203,6 +248,20 @@
             </svg>
             Kembali ke Daftar Proposal
         </a>
+
+        {{-- Hidden form: hapus item terpilih (bulk) --}}
+        <form id="bulkDeleteForm" action="{{ route('Item.destroySelected') }}" method="POST" class="hidden">
+            @csrf
+            @method('DELETE')
+            <div id="bulkDeleteInputs"></div>
+        </form>
+
+        {{-- Hidden form: hapus semua item pada proposal ini sekaligus --}}
+        <form id="deleteAllItemsForm" action="{{ route('Item.destroyAllForKegiatan', $kegiatan->ID_Kegiatan) }}"
+            method="POST" class="hidden">
+            @csrf
+            @method('DELETE')
+        </form>
 
         {{-- Modal Tambah Sie --}}
         <div id="sieModal"
@@ -532,6 +591,79 @@
         function closeEditSieModal() {
             const modal = document.getElementById('editSieModal');
             modal.classList.add('hidden');
+        }
+
+        // ===== Filter item (per Sie & kata kunci Keterangan) =====
+        function applyItemFilter() {
+            const sieId = document.getElementById('filterSie').value;
+            const keyword = document.getElementById('filterKeterangan').value.trim().toLowerCase();
+
+            document.querySelectorAll('#itemTableBody tr[data-sie-id]').forEach(row => {
+                const matchesSie = !sieId || row.getAttribute('data-sie-id') === sieId;
+                let visible = matchesSie;
+
+                if (visible && keyword && row.classList.contains('item-row')) {
+                    const keterangan = row.getAttribute('data-keterangan') || '';
+                    visible = keterangan.includes(keyword);
+                }
+
+                row.style.display = visible ? '' : 'none';
+
+                // Item yang tersembunyi karena filter otomatis dilepas dari seleksi,
+                // supaya tidak ikut terhapus tanpa terlihat oleh user.
+                if (!visible) {
+                    const checkbox = row.querySelector('.item-select-checkbox');
+                    if (checkbox) checkbox.checked = false;
+                }
+            });
+
+            document.getElementById('selectAllItems').checked = false;
+            updateBulkDeleteButton();
+        }
+
+        // ===== Pilih semua item yang sedang terlihat (mengikuti filter) =====
+        function toggleSelectAllItems(source) {
+            document.querySelectorAll('#itemTableBody tr.item-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const checkbox = row.querySelector('.item-select-checkbox');
+                    if (checkbox) checkbox.checked = source.checked;
+                }
+            });
+            updateBulkDeleteButton();
+        }
+
+        function updateBulkDeleteButton() {
+            const count = document.querySelectorAll('.item-select-checkbox:checked').length;
+            const btn = document.getElementById('bulkDeleteBtn');
+            btn.disabled = count === 0;
+            document.getElementById('bulkDeleteCount').textContent = count;
+        }
+
+        // ===== Hapus item terpilih sekaligus =====
+        function submitBulkDelete() {
+            const checked = document.querySelectorAll('.item-select-checkbox:checked');
+            if (checked.length === 0) return;
+
+            if (!confirm(`Hapus ${checked.length} item terpilih? Tindakan ini tidak dapat dibatalkan.`)) return;
+
+            const container = document.getElementById('bulkDeleteInputs');
+            container.innerHTML = '';
+            checked.forEach(checkbox => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'item_ids[]';
+                input.value = checkbox.value;
+                container.appendChild(input);
+            });
+
+            document.getElementById('bulkDeleteForm').submit();
+        }
+
+        // ===== Hapus semua item pada proposal ini sekaligus =====
+        function confirmDeleteAllItems() {
+            if (confirm('Hapus SEMUA item pada proposal ini sekaligus? Tindakan ini tidak dapat dibatalkan.')) {
+                document.getElementById('deleteAllItemsForm').submit();
+            }
         }
     </script>
 @endsection
