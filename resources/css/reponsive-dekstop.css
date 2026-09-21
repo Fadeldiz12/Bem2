@@ -1,0 +1,170 @@
+/* ============================================================
+   responsive-desktop.css
+   Fix kompatibilitas semua ukuran desktop untuk BEM Polmed
+   Letakkan di: public/css/responsive-desktop.css
+   Tambahkan di layout: <link href="{{ asset('css/responsive-desktop.css') }}" rel="stylesheet">
+   ============================================================ */
+
+/* ────────────────────────────────────────────────────────────
+   1. CONTAINER — batasi lebar maksimum di layar sangat lebar
+   Bootstrap default max-width di xl = 1140px, xxl = 1320px.
+   Kita pakai 1280px agar konten tidak terlalu menyebar.
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .container { max-width: 1280px; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   2. NAVBAR — pastikan tidak terlalu lebar di ultrawide
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1600px) {
+  .navbar-custom .container { max-width: 1280px; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   3. HERO SECTIONS — font dan gambar fluid di semua ukuran
+   ──────────────────────────────────────────────────────────── */
+.profil-hero-logo,
+.ministry-hero-logo {
+  height: clamp(160px, 22vw, 320px);
+}
+
+.profil-hero-title,
+.ministry-hero-title {
+  font-size: clamp(1.6rem, 3vw, 3rem);
+}
+
+/* ────────────────────────────────────────────────────────────
+   4. STRUCT SECTION (profil) — batasi lebar card wrap
+   ──────────────────────────────────────────────────────────── */
+.struct-card-wrap {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Di layar sangat lebar, pastikan menteri tidak terlalu menyebar */
+@media (min-width: 1400px) {
+  .struct-scroll-inner {
+    max-width: 1060px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   5. PENGURUS PAGE — card row tidak terlalu menyebar
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .card-row {
+    max-width: 1060px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   6. MEMBER GRID (kementerian detail) — batasi lebar grid
+   ──────────────────────────────────────────────────────────── */
+.member-carousel-outer {
+  max-width: 1060px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Di layar besar, card anggota sedikit lebih besar */
+@media (min-width: 1400px) {
+  .member-card__img-wrap        { width: 200px; height: 255px; }
+  .member-card--minister .member-card__img-wrap { width: 240px; height: 305px; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   7. FILOSOFI LOGO — sticky tidak perlu di layar sangat tinggi
+   Kalau viewport height > 900px dan konten filosofi pendek,
+   sticky bisa membuat logo overlap footer.
+   ──────────────────────────────────────────────────────────── */
+@media (min-height: 900px) and (min-width: 768px) {
+  .logo-sticky {
+    position: sticky;
+    top: 90px;
+    /* Pastikan tidak melewati batas section dengan max-height */
+    max-height: calc(100vh - 120px);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   8. PCARD (pengurus) — ukuran lebih besar di layar lebar
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .pcard--lg .pcard__wrap { width: 220px; height: 285px; }
+  .pcard--md .pcard__wrap { width: 175px; height: 228px; }
+  .pcard--sm .pcard__wrap { width: 145px; height: 188px; }
+  .pcard--lg .pcard__label { min-width: 200px; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   9. SECTION GROUP (pengurus) — batasi lebar section
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .section-group .card-row {
+    gap: 1.4rem;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   10. MISI CARDS — tidak terlalu lebar di desktop besar
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1200px) {
+  .misi-card {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   11. FOOTER — konten tidak terlalu menyebar di ultrawide
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1600px) {
+  .footer-purple .container { max-width: 1280px; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   12. PRESMA ROW — tidak terlalu jauh di layar lebar
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1200px) {
+  .presma-row {
+    gap: 5rem;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   13. WARNA & FILOSOFI SECTION — batasi lebar kolom konten
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1200px) {
+  .warna-card {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   14. DEPT BADGE — sedikit lebih besar di desktop lebar
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .dept-badge { width: 145px; }
+  .dept-badge-logo { height: 36px; width: 36px; }
+  .dept-badge-name { font-size: .72rem; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   15. PERSON CARD (profil struct) — sedikit lebih besar
+   ──────────────────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .person-photo-wrap { width: 120px; height: 152px; }
+  .person-photo      { width: 120px; height: 152px; }
+  .person-no-photo   { width: 120px; height: 152px; }
+  .person-col        { width: 140px; }
+  .person-label      { width: 130px; }
+}
