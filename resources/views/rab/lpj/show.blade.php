@@ -72,6 +72,20 @@
             </div>
         </div>
 
+        <!-- Filter & Pencarian -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4 flex flex-col sm:flex-row gap-3">
+            <select id="filterSie" onchange="applyItemFilter()"
+                class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600">
+                <option value="">Semua Sie</option>
+                @foreach ($sie as $s)
+                    <option value="{{ $s->ID_Sie }}">{{ $s->Nama_Sie }}</option>
+                @endforeach
+            </select>
+            <input type="text" id="filterKeterangan" oninput="applyItemFilter()"
+                placeholder="Cari keterangan item..."
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600">
+        </div>
+
         <!-- Table Content -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
             <div class="overflow-x-auto">
@@ -79,7 +93,6 @@
                     <thead>
                         <tr class="bg-purple-800 text-white text-sm">
                             <th class="px-6 py-4 font-semibold w-16">No</th>
-                            <th class="px-6 py-4 font-semibold">Jenis Pengeluaran</th>
                             <th class="px-6 py-4 font-semibold">Keterangan</th>
                             <th class="px-6 py-4 font-semibold">Volume</th>
                             <th class="px-6 py-4 font-semibold">Satuan</th>
@@ -88,11 +101,11 @@
                             <th class="px-6 py-4 font-semibold text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="text-sm text-gray-700">
+                    <tbody class="text-sm text-gray-700" id="itemTableBody">
                         @php $grandTotal = 0; @endphp
                         @forelse ($sie as $index => $s)
-                            <tr class="bg-purple-200 border-b border-purple-300">
-                                <td colspan="8" class="px-6 py-3">
+                            <tr class="bg-purple-200 border-b border-purple-300 sie-row" data-sie-id="{{ $s->ID_Sie }}">
+                                <td colspan="7" class="px-6 py-3">
                                     <div class="flex items-center justify-between w-full">
                                         <span class="text-purple-900 font-bold text-sm uppercase tracking-wider">
                                             {{ $s->Nama_Sie }}
@@ -137,15 +150,9 @@
                                             $subtotalSie += $totalTampil;
                                         @endphp
 
-                                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition bg-green-50/20">
+                                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition bg-green-50/20 item-row"
+                                            data-sie-id="{{ $s->ID_Sie }}" data-keterangan="{{ strtolower($item->Keterangan) }}">
                                             <td class="px-6 py-4">{{ $no++ }}</td>
-                                            <td class="px-6 py-4 font-medium text-gray-900">
-                                                {{ $item->Jenis_Pengeluaran }}
-                                                @if ($item->isNew)
-                                                    <span
-                                                        class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">Tambahan</span>
-                                                @endif
-                                            </td>
                                             <td class="px-6 py-4">
                                                 @include('rab.lpj.partials.keterangan-item', ['item' => $item, 'namaSie' => $s->Nama_Sie])
                                             </td>
@@ -188,13 +195,9 @@
                                 {{-- BAGIAN B: ITEM TAMBAHAN (DI LUAR PROPOSAL) YANG BELUM PUNYA KWITANSI --}}
                                 @foreach ($tambahanTanpaBon as $item)
                                     @php $subtotalSie += $item->Total_Realisasi; @endphp
-                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition bg-amber-50/40">
+                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition bg-amber-50/40 item-row"
+                                        data-sie-id="{{ $s->ID_Sie }}" data-keterangan="{{ strtolower($item->Keterangan) }}">
                                         <td class="px-6 py-4">{{ $no++ }}</td>
-                                        <td class="px-6 py-4 font-medium text-gray-900">
-                                            {{ $item->Jenis_Pengeluaran }}
-                                            <span
-                                                class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">Tambahan</span>
-                                        </td>
                                         <td class="px-6 py-4">
                                             @include('rab.lpj.partials.keterangan-item', ['item' => $item, 'namaSie' => $s->Nama_Sie])
                                         </td>
@@ -217,9 +220,9 @@
                                 {{-- BAGIAN C: BELUM ADA BON (TAMPILKAN ITEM RAB ASLI) --}}
                                 @foreach ($itemsWithoutBon as $item)
                                     @php $subtotalSie += $item->Total; @endphp
-                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition item-row"
+                                        data-sie-id="{{ $s->ID_Sie }}" data-keterangan="{{ strtolower($item->Keterangan) }}">
                                         <td class="px-6 py-4">{{ $no++ }}</td>
-                                        <td class="px-6 py-4 font-medium text-gray-900">{{ $item->Jenis_Pengeluaran }}</td>
                                         <td class="px-6 py-4">{{ $item->Keterangan }}</td>
                                         <td class="px-6 py-4">{{ $item->Qty }}</td>
                                         <td class="px-6 py-4">{{ $item->Satuan }}</td>
@@ -236,15 +239,15 @@
                                     </tr>
                                 @endforeach
                             @else
-                                <tr class="border-b border-gray-100 bg-gray-50/50">
-                                    <td colspan="8" class="px-6 py-4 text-center text-gray-400 italic">
+                                <tr class="border-b border-gray-100 bg-gray-50/50 sie-row" data-sie-id="{{ $s->ID_Sie }}">
+                                    <td colspan="7" class="px-6 py-4 text-center text-gray-400 italic">
                                         Belum ada item anggaran untuk Sie ini.
                                     </td>
                                 </tr>
                             @endif
 
-                            <tr class="bg-violet-300 border-b border-purple-300">
-                                <td colspan="8" class="px-6 py-3">
+                            <tr class="bg-violet-300 border-b border-purple-300 sie-row" data-sie-id="{{ $s->ID_Sie }}">
+                                <td colspan="7" class="px-6 py-3">
                                     <div class="flex items-center justify-end w-full">
                                         <span class="text-purple-900 font-bold text-sm uppercase tracking-wider">
                                             Total {{ $s->Nama_Sie }}
@@ -258,7 +261,7 @@
                             @php $grandTotal += $subtotalSie; @endphp
                         @empty
                             <tr>
-                                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
                                     Belum ada Sie yang tersedia.
                                 </td>
                             </tr>
@@ -267,7 +270,7 @@
 
                     <tfoot>
                         <tr class="bg-purple-700 text-white text-sm font-bold uppercase tracking-wider">
-                            <td colspan="6" class="px-6 py-4 text-right">TOTAL KESELURUHAN</td>
+                            <td colspan="5" class="px-6 py-4 text-right">TOTAL KESELURUHAN</td>
                             <td colspan="2" class="px-6 py-4">Rp {{ number_format($grandTotal, 0, ',', '.') }}</td>
                         </tr>
                     </tfoot>
@@ -1295,6 +1298,24 @@
 
         function tutupModalItemTambahan() {
             document.getElementById('itemTambahanModal').classList.add('hidden');
+        }
+
+        // ===== Filter item (per Sie & kata kunci Keterangan) =====
+        function applyItemFilter() {
+            const sieId = document.getElementById('filterSie').value;
+            const keyword = document.getElementById('filterKeterangan').value.trim().toLowerCase();
+
+            document.querySelectorAll('#itemTableBody tr[data-sie-id]').forEach(row => {
+                const matchesSie = !sieId || row.getAttribute('data-sie-id') === sieId;
+                let visible = matchesSie;
+
+                if (visible && keyword && row.classList.contains('item-row')) {
+                    const keterangan = row.getAttribute('data-keterangan') || '';
+                    visible = keterangan.includes(keyword);
+                }
+
+                row.style.display = visible ? '' : 'none';
+            });
         }
     </script>
 @endsection

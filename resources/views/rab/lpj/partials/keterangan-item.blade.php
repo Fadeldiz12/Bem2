@@ -1,6 +1,11 @@
 {{-- Keterangan item realisasi; item tambahan (di luar proposal) bisa diedit & dihapus langsung --}}
 <div class="flex items-start justify-between gap-2">
-    <span>{{ $item->Keterangan }}</span>
+    <span>
+        {{ $item->Keterangan }}
+        @if ($item->isNew)
+            <span class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">Tambahan</span>
+        @endif
+    </span>
 
     @if ($item->isNew)
         <div class="flex shrink-0 gap-1">
