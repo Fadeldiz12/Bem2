@@ -1,5 +1,6 @@
 @extends('layouts.public')
-@section('title','Profil BEM Polmed')
+@section('title', 'Profil, Visi & Misi '.($year?->cabinet_name ?? 'BEM Polmed'))
+@section('meta_description', 'Profil '.($year?->cabinet_name ?? 'BEM Polmed').' BEM Politeknik Negeri Medan'.($year?->year_label ? ' periode '.$year->year_label : '').': visi, misi, filosofi logo, makna warna, dan jajaran menteri.')
 @section('content')
 
 {{-- HERO — full viewport, grid bg, blur gradients --}}
@@ -14,7 +15,7 @@
            class="profil-hero-logo"
            loading="eager" alt="{{ $year->cabinet_name }}">
     @endif
-    <h2 class="profil-hero-title">{{ strtoupper($year?->cabinet_name ?? '') }}</h2>
+    <h1 class="profil-hero-title">{{ strtoupper($year?->cabinet_name ?? '') }}</h1>
     <p class="profil-hero-tagline">{{ $year?->tagline }}</p>
   </div>
 
@@ -191,7 +192,7 @@
                               @if($menteri->ministry_logo)
                                   <img src="{{ asset('storage/'.$menteri->ministry_logo) }}"
                                       class="person-ministry-bg"
-                                      loading="lazy">
+                                      loading="lazy" alt="">
                               @endif
 
                               @if($menteri->photo_path)
@@ -220,7 +221,7 @@
                           @if($menteri->ministry_logo)
                               <img src="{{ asset('storage/'.$menteri->ministry_logo) }}"
                                   class="dept-badge-logo"
-                                  loading="lazy">
+                                  loading="lazy" alt="">
                           @endif
 
                           <span class="dept-badge-name">

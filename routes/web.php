@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\ApiController;
+use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AuthController;
 
@@ -30,10 +31,14 @@ Route::middleware(['throttle:public'])->group(function () {
     Route::get('/hubungi/media-partner', [PublicController::class, 'mediaPartner'])->name('media-partner');
     Route::get('/berita', [PublicController::class, 'berita'])->name('berita');
     Route::get('/berita/{slug}', [PublicController::class, 'beritaDetail'])->name('berita.detail');
+
+    // SEO: peta situs & robots.txt (public/robots.txt statis sudah dihapus agar route ini yang dipakai)
+    Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+    Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 });
 
 // ===================== API =====================
-Route::middleware(['throttle:api-public'])->group(function () {
+Route::middleware(['noindex', 'throttle:api-public'])->group(function () {
     Route::get('/api/activities', [ApiController::class, 'activities'])->name('api.activities');
     Route::get('/api/departments/{ministryId}', [Admin\MemberController::class, 'getDepartments'])->name('api.departments');
     Route::get('/api/ministries/{yearId}', [Admin\MemberController::class, 'getMinistriesByYear'])->name('api.ministries');
@@ -42,7 +47,8 @@ Route::middleware(['throttle:api-public'])->group(function () {
 
 // ===================== ADMIN AUTH =====================
 // Semua route auth pakai throttle ketat (10 req/menit)
-Route::middleware(['throttle:auth'])->group(function () {
+// 'noindex' = halaman privat tidak boleh muncul di hasil pencarian Google
+Route::middleware(['noindex', 'throttle:auth'])->group(function () {
     Route::get('/login',     [Admin\AuthController::class, 'login'])->name('admin.login');
     Route::post('/login',    [Admin\AuthController::class, 'doLogin'])->name('admin.login.post');
     Route::get('/logout',    [Admin\AuthController::class, 'logout'])->name('admin.logout');
@@ -51,7 +57,7 @@ Route::middleware(['throttle:auth'])->group(function () {
 });
 
 // /admin dan /admin/login redirect ke /login
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->middleware('noindex')->group(function () {
     Route::get('/', fn() => redirect()->route('admin.login'));
     Route::get('/login', fn() => redirect()->route('admin.login'));
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('admin.forgot-password');
@@ -62,7 +68,7 @@ Route::prefix('admin')->group(function () {
 });
 
 // ===================== ADMIN PANEL =====================
-Route::prefix('admin')->name('admin.')->middleware(['admin.session-expiry', 'admin.auth'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['noindex', 'admin.session-expiry', 'admin.auth'])->group(function () {
     Route::get('/dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('kabinet')->name('kabinet.')->group(function () {
@@ -180,7 +186,7 @@ Route::get('/about', function () {
 Route::get('/rab', [RabIndexController::class, 'index'])->name('rab.index');
 
 // ----- Wajib login, role apa saja -----
-Route::middleware(['role'])->group(function () {
+Route::middleware(['noindex', 'role'])->group(function () {
     Route::get('/dashboard', function () {
         return view('rab.dashboard');
     })->name('dashboard');
@@ -191,12 +197,11 @@ Route::middleware(['role'])->group(function () {
 });
 
 // ----- Superadmin & Admin: kelola Proposal + LPJ -----
-Route::middleware(['role:super_admin,admin'])->group(function () {
+Route::middleware(['noindex', 'role:super_admin,admin'])->group(function () {
     Route::get('/proposal', [KegiatanController::class, 'index'])->name('proposal.index');
     Route::get('/proposal/{id}/rab', [KegiatanController::class, 'show'])->name('proposal.show');
     Route::post('/proposal', [KegiatanController::class, 'store'])->name('proposal.store');
     Route::put('/proposal/{kegiatan}/edit', [KegiatanController::class, 'update'])->name('proposal.update');
-    Route::delete('/proposal/{kegiatan}', [KegiatanController::class, 'destroy'])->name('proposal.destroy');
 
     Route::post('/proposal/tambah-sie', [SieController::class, 'store'])->name('Sie.store');
     Route::put('/proposal/edit-sie/{sie}', [SieController::class, 'update'])->name('Sie.update');
@@ -205,6 +210,13 @@ Route::middleware(['role:super_admin,admin'])->group(function () {
     Route::post('/proposal/tambah-item', [ItemController::class, 'store'])->name('Item.store');
     Route::put('/proposal/edit-item/{item}', [ItemController::class, 'update'])->name('Item.update');
     Route::delete('/proposal/hapus-item/{item}', [ItemController::class, 'destroy'])->name('Item.destroy');
+    Route::delete('/proposal/hapus-item-terpilih', [ItemController::class, 'destroySelected'])->name('Item.destroySelected');
+    Route::delete('/proposal/{kegiatan}/hapus-semua-item', [ItemController::class, 'destroyAllForKegiatan'])->name('Item.destroyAllForKegiatan');
+
+    // Diletakkan setelah route literal di atas ('/proposal/hapus-item-terpilih', dkk.)
+    // karena '{kegiatan}' adalah wildcard satu segmen — kalau didaftarkan lebih dulu,
+    // ia akan "menelan" request ke route literal tersebut duluan.
+    Route::delete('/proposal/{kegiatan}', [KegiatanController::class, 'destroy'])->name('proposal.destroy');
 
     Route::get('/proposal/{id}/export-pdf', [KegiatanController::class, 'exportPdfRab'])->name('proposal.export.pdf');
     Route::get('/proposal/{id}/export-excel', [KegiatanController::class, 'exportExcelRab'])->name('proposal.export.excel');
@@ -226,7 +238,7 @@ Route::middleware(['role:super_admin,admin'])->group(function () {
 });
 
 // ----- Superadmin saja: kelola users, settings, log -----
-Route::middleware(['role:super_admin'])->group(function () {
+Route::middleware(['noindex', 'role:super_admin'])->group(function () {
     Route::get('/users', function () {
         $users = User::all();
         return view('rab.users.index', compact('users'));
@@ -299,7 +311,7 @@ Route::middleware(['role:super_admin'])->group(function () {
 });
 
 // ----- Role user biasa saja: proposal & LPJ milik sendiri -----
-Route::middleware(['role:user'])->group(function () {
+Route::middleware(['noindex', 'role:user'])->group(function () {
     Route::get('/my-proposals', function () {
         return view('rab.proposal.index');
     })->name('user.proposals');

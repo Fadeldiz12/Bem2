@@ -1,14 +1,15 @@
 @extends('layouts.public')
-@section('title','Arsip: '.$archived_year->cabinet_name)
+@section('title', 'Arsip '.$archived_year->cabinet_name.' ('.$archived_year->year_label.')')
+@section('meta_description', 'Arsip '.$archived_year->cabinet_name.' BEM Politeknik Negeri Medan periode '.$archived_year->year_label.'.'.($archived_year->visi ? ' Visi: '.$archived_year->visi : ''))
 @section('content')
 
 {{-- ── Header Kabinet ── --}}
 <section class="container py-5 text-center">
   <a href="{{ route('arsip') }}" class="btn btn-sm btn-outline-secondary rounded-pill mb-4">← Kembali ke Arsip</a>
   @if($archived_year->logo_path)
-    <br><img src="{{ asset('storage/'.$archived_year->logo_path) }}" style="height:140px" class="mb-3">
+    <br><img src="{{ asset('storage/'.$archived_year->logo_path) }}" style="height:140px" class="mb-3" alt="Logo {{ $archived_year->cabinet_name }}">
   @endif
-  <h2 class="font-serif fw-bold" style="color:var(--purple-deep)">{{ $archived_year->cabinet_name }}</h2>
+  <h1 class="h2 font-serif fw-bold" style="color:var(--purple-deep)">{{ $archived_year->cabinet_name }}</h1>
   <p class="text-muted">{{ $archived_year->year_label }} · {{ $archived_year->start_date->format('d M Y') }} - {{ $archived_year->end_date->format('d M Y') }}</p>
 </section>
 
@@ -19,7 +20,7 @@
     @if($archived_year->presma_name)
     <div class="col-6 col-md-2">
       @if($archived_year->presma_photo)
-        <img src="{{ asset('storage/'.$archived_year->presma_photo) }}" class="rounded-3 mb-2" style="width:100%;aspect-ratio:3/4;object-fit:cover">
+        <img src="{{ asset('storage/'.$archived_year->presma_photo) }}" class="rounded-3 mb-2" style="width:100%;aspect-ratio:3/4;object-fit:cover" loading="lazy" alt="{{ $archived_year->presma_name }}">
       @endif
       <strong class="d-block">{{ $archived_year->presma_name }}</strong>
       <small class="text-muted">Presiden Mahasiswa</small>
@@ -28,7 +29,7 @@
     @if($archived_year->wapresma_name)
     <div class="col-6 col-md-2">
       @if($archived_year->wapresma_photo)
-        <img src="{{ asset('storage/'.$archived_year->wapresma_photo) }}" class="rounded-3 mb-2" style="width:100%;aspect-ratio:3/4;object-fit:cover">
+        <img src="{{ asset('storage/'.$archived_year->wapresma_photo) }}" class="rounded-3 mb-2" style="width:100%;aspect-ratio:3/4;object-fit:cover" loading="lazy" alt="{{ $archived_year->wapresma_name }}">
       @endif
       <strong class="d-block">{{ $archived_year->wapresma_name }}</strong>
       <small class="text-muted">Wakil Presiden Mahasiswa</small>

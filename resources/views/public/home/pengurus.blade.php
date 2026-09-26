@@ -1,8 +1,9 @@
 @extends('layouts.public')
-@section('title','Pengurus')
+@section('title', trim('Pengurus '.($year?->cabinet_name ?? '')))
+@section('meta_description','Daftar pengurus '.($year?->cabinet_name ?? 'BEM Polmed').' BEM Politeknik Negeri Medan: presiden dan wakil presiden mahasiswa, menteri, kepala departemen, serta staf.')
 @section('content')
 <section class="container py-5">
-  <div class="text-center mb-5"><span class="page-pill">Pengurus</span></div>
+  <div class="text-center mb-5"><h1 class="page-pill">Pengurus</h1></div>
 
   {{-- ═══════════════════════════════════════════
        Presma & Wapresma

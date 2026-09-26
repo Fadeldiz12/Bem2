@@ -1,5 +1,11 @@
 @extends('layouts.public')
-@section('title', $ministry->name)
+@section('title', 'Kementerian '.$ministry->name)
+@section('meta_description', $ministry->description
+  ? $ministry->description
+  : 'Kementerian '.$ministry->name.' BEM Politeknik Negeri Medan (BEM Polmed): menteri, departemen, dan program kerja.')
+@if($ministry->logo_path)
+  @section('og_image', asset('storage/'.$ministry->logo_path))
+@endif
 @section('content')
 
 {{-- HERO --}}
@@ -12,7 +18,7 @@
       <img src="{{ asset('storage/'.$ministry->logo_path) }}" class="ministry-hero-logo" loading="eager" alt="{{ $ministry->name }}">
     @endif
     <p class="small text-muted mb-1">Kementerian</p>
-    <h2 class="ministry-hero-title">{{ strtoupper($ministry->name) }}</h2>
+    <h1 class="ministry-hero-title">{{ strtoupper($ministry->name) }}</h1>
     <div class="d-flex gap-2 flex-wrap justify-content-center mt-3">
       @foreach($ministry->departments as $i => $d)
         <span class="badge rounded-pill px-3 py-2"

@@ -1,8 +1,9 @@
 @extends('layouts.public')
 @section('title','Jadwal Peminjaman Tempat')
+@section('meta_description','Kalender jadwal peminjaman tempat dan kegiatan organisasi mahasiswa Politeknik Negeri Medan beserta status persetujuannya dari BEM Polmed.')
 @section('content')
 <section class="container py-5">
-  <div class="text-center mb-4"><span class="page-pill">Jadwal Peminjaman Tempat</span></div>
+  <div class="text-center mb-4"><h1 class="page-pill">Jadwal Peminjaman Tempat</h1></div>
   <div class="d-flex justify-content-center gap-3 mb-4 small flex-wrap">
     <span><span class="legend-dot" style="background:#f59e0b"></span> Menunggu</span>
     <span><span class="legend-dot" style="background:#10b981"></span> Disetujui</span>

@@ -1,8 +1,9 @@
 @extends('layouts.public')
 @section('title','Media Partner')
+@section('meta_description','Prosedur pengajuan media partner dan publikasi kegiatan bersama BEM Politeknik Negeri Medan (BEM Polmed), baik internal maupun eksternal kampus.')
 @section('content')
 <section class="container py-5">
-  <div class="text-center mb-5"><span class="page-pill">Media Partner</span></div>
+  <div class="text-center mb-5"><h1 class="page-pill">Media Partner</h1></div>
   @foreach($partners as $p)
   <div class="mb-5">
     <h4 class="fw-bold mb-3 d-flex align-items-center gap-2" style="color:var(--purple-deep)">
