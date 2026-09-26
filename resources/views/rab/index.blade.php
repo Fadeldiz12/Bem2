@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('title', 'SIGMA BEM - Sistem Manajemen RAB')
+@section('meta_description', 'SIGMA BEM: solusi digital BEM Polmed untuk menyusun RAB, proposal, dan LPJ kegiatan organisasi mahasiswa Politeknik Negeri Medan.')
 
 @section('content')
 <style>

@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.auth'            => \App\Http\Middleware\AdminAuth::class,
             'admin.session-expiry'  => \App\Http\Middleware\AdminSessionExpiry::class,
             'role'                  => \App\Http\Middleware\CheckRole::class,
+            'noindex'               => \App\Http\Middleware\NoIndex::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -1,8 +1,9 @@
 @extends('layouts.public')
-@section('title','Struktur Organisasi')
+@section('title', trim('Struktur Organisasi '.($year?->cabinet_name ?? '')))
+@section('meta_description','Struktur organisasi '.($year?->cabinet_name ?? 'BEM Polmed').' BEM Politeknik Negeri Medan: presiden mahasiswa, kementerian, dan departemen.')
 @section('content')
 <section class="container py-5 text-center">
-  <div class="mb-5"><span class="page-pill">Struktur Organisasi</span></div>
+  <div class="mb-5"><h1 class="page-pill">Struktur Organisasi</h1></div>
   @if(!$year)
     <p class="text-muted">Belum ada kabinet aktif.</p>
   @else

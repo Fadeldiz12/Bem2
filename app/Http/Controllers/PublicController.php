@@ -190,7 +190,7 @@ class PublicController extends Controller
         $category = $request->get('kategori','');
         $query    = Post::where('status','published')->with('author')->latest('published_at');
         if ($category) $query->where('category', $category);
-        $data['posts']    = $query->paginate(12);
+        $data['posts']    = $query->paginate(12)->withQueryString();
         $data['category'] = $category;
         return view('public.home.berita', $data);
     }

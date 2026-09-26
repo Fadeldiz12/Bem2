@@ -1,5 +1,6 @@
 @extends('layouts.public')
 @section('title','Beranda')
+@section('meta_title','BEM Polmed | Badan Eksekutif Mahasiswa Politeknik Negeri Medan')
 @section('content')
 
 {{-- HERO SECTION — full viewport height --}}
@@ -14,8 +15,8 @@
         <span class="hero-badge mb-4 d-inline-flex">
           <i class="bi bi-circle-fill me-2" style="font-size:.5rem"></i> Selamat Datang di Website Resmi
         </span>
-        <p class="font-serif fs-4 mb-1" style="color:var(--purple)">BEM POLMED {{ $year?->year_label }}</p>
         <h1 class="font-serif fw-bold mb-3" style="color:var(--purple-deep); font-size:clamp(2.2rem,5vw,3.8rem); line-height:1.1">
+          <span class="d-block fs-4 fw-normal lh-base mb-1" style="color:var(--purple)">BEM POLMED {{ $year?->year_label }}</span>
           {{ strtoupper($year?->cabinet_name ?? '') }}
         </h1>
         @if($year?->start_date)

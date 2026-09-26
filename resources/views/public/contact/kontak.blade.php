@@ -1,8 +1,9 @@
 @extends('layouts.public')
 @section('title','Kontak')
+@section('meta_description','Hubungi BEM Politeknik Negeri Medan (BEM Polmed) melalui WhatsApp pengurus untuk pertanyaan, aspirasi, dan kerja sama.')
 @section('content')
 <section class="container py-5">
-  <div class="text-center mb-5"><span class="page-pill">Kontak</span></div>
+  <div class="text-center mb-5"><h1 class="page-pill">Kontak</h1></div>
   @forelse($contacts as $c)
   <div class="mb-4">
     <h6 class="fw-bold mb-2" style="color:var(--purple-deep)">{{ $c->whatsapp_label ?: $c->name }}</h6>

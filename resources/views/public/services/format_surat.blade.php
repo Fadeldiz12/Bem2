@@ -1,8 +1,9 @@
 @extends('layouts.public')
 @section('title','Format Surat')
+@section('meta_description','Unduh format dan template surat resmi untuk HMPS dan UKM Politeknik Negeri Medan yang disediakan oleh BEM Polmed.')
 @section('content')
 <section class="container py-5">
-  <div class="text-center mb-5"><span class="page-pill">Format Surat</span></div>
+  <div class="text-center mb-5"><h1 class="page-pill">Format Surat</h1></div>
   <div class="row g-4 justify-content-center">
     @forelse($formats as $f)
     <div class="col-6 col-md-3">

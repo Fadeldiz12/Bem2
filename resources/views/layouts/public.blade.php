@@ -3,7 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>@yield('title','BEM Polmed') - {{ $year->cabinet_name ?? 'BEM Polmed' }}</title>
+@php
+  // ── SEO ──────────────────────────────────────────────────────────────
+  // Tiap halaman cukup mengisi section berikut (semuanya opsional):
+  //   title            → judul halaman, otomatis ditambah " | BEM Polmed"
+  //   meta_title       → judul lengkap (menimpa format di atas, dipakai Beranda)
+  //   meta_description → ringkasan untuk hasil pencarian & preview share
+  //   canonical        → URL utama halaman (default: URL saat ini tanpa query string)
+  //   og_image, og_type → gambar & jenis konten saat link dibagikan
+  // Section inline (@section('x', $nilai)) sudah di-escape Blade, jadi di-decode dulu
+  // lalu di-escape ulang oleh {{ }} di bawah.
+  $seoText   = fn ($v) => trim(preg_replace('/\s+/u', ' ', strip_tags(html_entity_decode((string) $v, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+  $siteName  = 'BEM Polmed';
+  $cabinet   = $year->cabinet_name ?? null;
+  $pageTitle = $seoText($__env->yieldContent('title'));
+  $fullTitle = $seoText($__env->yieldContent('meta_title'));
+  $metaTitle = $fullTitle ?: ($pageTitle !== '' ? $pageTitle.' | '.$siteName : $siteName);
+  $ogTitle   = $fullTitle ?: ($pageTitle ?: $siteName);
+  $metaDesc  = Str::limit(
+      $seoText($__env->yieldContent('meta_description'))
+        ?: 'Website resmi BEM Politeknik Negeri Medan (BEM Polmed)'.($cabinet ? ' '.$cabinet : '').': profil, kementerian, pengurus, berita, jadwal peminjaman, dan format surat.',
+      160, '...', preserveWords: true
+  );
+  $canonical = $seoText($__env->yieldContent('canonical')) ?: url()->current();
+  $pageImage = $seoText($__env->yieldContent('og_image'));
+  $ogImage   = $pageImage ?: (!empty($year->logo_path) ? asset('storage/'.$year->logo_path) : asset('images/logo_bem_polmed.webp'));
+  $ogType    = $seoText($__env->yieldContent('og_type')) ?: 'website';
+  $robots    = !empty($is_preview) ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
+@endphp
+<title>{{ $metaTitle }}</title>
+<meta name="description" content="{{ $metaDesc }}">
+<meta name="robots" content="{{ $robots }}">
+<link rel="canonical" href="{{ $canonical }}">
+<!-- Open Graph (preview saat link dibagikan di WhatsApp, Facebook, LinkedIn, dll) -->
+<meta property="og:site_name" content="{{ $siteName }}">
+<meta property="og:locale" content="id_ID">
+<meta property="og:type" content="{{ $ogType }}">
+<meta property="og:title" content="{{ $ogTitle }}">
+<meta property="og:description" content="{{ $metaDesc }}">
+<meta property="og:url" content="{{ $canonical }}">
+<meta property="og:image" content="{{ $ogImage }}">
+<!-- Twitter/X Card (judul, deskripsi & gambar diambil dari tag og:* di atas; foto besar hanya untuk berita) -->
+<meta name="twitter:card" content="{{ $ogType === 'article' && $pageImage ? 'summary_large_image' : 'summary' }}">
+@stack('meta')
 <!-- Favicon Dinamis dari Logo Kabinet -->
 @if(!empty($year->logo_path))
   <link rel="icon" type="image/png" href="{{ asset('storage/' . $year->logo_path) }}">
@@ -25,7 +67,7 @@ body { font-family:'Poppins',sans-serif; color:#2d1266; background:#fff; }
 .dropdown-menu { border:none; box-shadow:0 8px 24px rgba(74,30,138,.15); border-radius:10px; font-size:.8rem; }
 .dropdown-item { font-size:.8rem; padding:.4rem .9rem; }
 .dropdown-item:hover { background:var(--purple-pale); color:var(--purple-deep); }
-.page-pill { background:#fff; border-radius:50px; padding:.6rem 1.6rem; box-shadow:0 4px 16px rgba(74,30,138,.1); display:inline-block; color:var(--purple-deep); font-weight:600; }
+.page-pill { background:#fff; border-radius:50px; padding:.6rem 1.6rem; box-shadow:0 4px 16px rgba(74,30,138,.1); display:inline-block; color:var(--purple-deep); font-weight:600; font-size:1rem; line-height:1.5; margin:0; }
 .btn-purple { background:linear-gradient(135deg,var(--purple-deep),var(--purple-light)); color:#fff; border:none; border-radius:50px; padding:.6rem 1.6rem; font-weight:600; }
 .btn-dark-purple { background:#1a0a3e; color:#fff; border-radius:50px; padding:.6rem 1.6rem; font-weight:600; border:none; }
 .section-purple { background:linear-gradient(135deg,#9d6fd6,#b794e8); border-radius:24px; color:#fff; padding:2.5rem; }
@@ -130,7 +172,7 @@ body { font-family:'Poppins',sans-serif; color:#2d1266; background:#fff; }
   <div class="container">
     <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('home') }}">
       @if(!empty($year->logo_path))
-        <img src="{{ asset('storage/' . $year->logo_path) }}" style="height:36px">
+        <img src="{{ asset('storage/' . $year->logo_path) }}" style="height:36px" alt="Logo {{ $year->cabinet_name }}">
       @else
         <span style="font-size:1.8rem">🌺</span>
       @endif
@@ -239,7 +281,7 @@ body { font-family:'Poppins',sans-serif; color:#2d1266; background:#fff; }
     <div class="row g-4 align-items-start">
       <div class="col-md-4">
         <div class="d-flex align-items-center gap-2 mb-2">
-          @if(!empty($year->logo_path))<img src="{{ asset('storage/' . $year->logo_path) }}" style="height:50px">@endif
+          @if(!empty($year->logo_path))<img src="{{ asset('storage/' . $year->logo_path) }}" style="height:50px" alt="Logo {{ $year->cabinet_name }}">@endif
           <div>
             <h5 class="font-serif mb-0" style="color:var(--purple-deep)">{{ $year->cabinet_name ?? '' }}</h5>
             <small class="fst-italic text-muted">#{{ str_replace(' ','',$year->tagline ?? '') }}</small>
