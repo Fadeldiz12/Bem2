@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Rab;
 use App\Http\Controllers\Controller;
 
 use App\Exports\LpjExport;
+use App\Helpers\LaporanDana;
 use App\Exports\RabExport;
 use App\Models\Kegiatan;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -147,13 +148,13 @@ class KegiatanController extends Controller
 
     public function exportPdf(int $id)
     {
-        // Ambil data beserta relasinya
-        $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj.bon'])->findOrFail($id);
-        $sies = $kegiatan->sie;
+        $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj'])->findOrFail($id);
+        $laporan = LaporanDana::pengeluaran($kegiatan);
 
-        // Gunakan view khusus untuk PDF agar layout tidak berantakan
-        $pdf = Pdf::loadView('rab.lpj.export-pdf', compact('kegiatan', 'sies'))
-            ->setPaper('A4', 'landscape'); // Landscape agar tabel tidak terpotong
+        // Format mengikuti dokumen "XII. Laporan Dana - B. Pengeluaran" (A4 portrait)
+        $pdf = Pdf::loadView('rab.lpj.export-pdf', compact('kegiatan', 'laporan'))
+            ->setPaper('A4', 'portrait')
+            ->setCallbacks(LaporanDana::pdfCallbacks());
 
         return $pdf->download('LPJ_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.pdf');
     }
