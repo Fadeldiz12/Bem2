@@ -2,16 +2,22 @@
 
 namespace App\Helpers;
 
+use App\Models\Item;
 use App\Models\Kegiatan;
+use App\Models\Sie;
 use Dompdf\Canvas;
 use Dompdf\Frame;
 use DOMElement;
 
+/**
+ * Data tabel dana (format dokumen "Laporan Dana - B. Pengeluaran") untuk export PDF, Excel & Word.
+ * pengeluaran() = LPJ (realisasi), anggaran() = Proposal (RAB). Keduanya menghasilkan struktur yang sama,
+ * sehingga ketiga renderer (resources/views/rab/export/*, App\Exports\TabelDana*) dipakai bersama.
+ */
 class LaporanDana
 {
     /**
-     * Data tabel "B. Pengeluaran" (Laporan Dana LPJ), dipakai export PDF & Excel.
-     * Butuh relasi sie.items dan sie.item_lpj sudah di-eager-load.
+     * LPJ. Butuh relasi sie.items dan sie.item_lpj sudah di-eager-load.
      *
      * Per Sie, item dikelompokkan per kwitansi: item_lpj per ID_Bon (realisasi),
      * lalu item tambahan yang belum punya bon, lalu item RAB yang belum punya bon
@@ -19,10 +25,7 @@ class LaporanDana
      */
     public static function pengeluaran(Kegiatan $kegiatan): array
     {
-        $sies = [];
-        $grandTotal = 0;
-
-        foreach ($kegiatan->sie->values() as $index => $sie) {
+        $laporan = self::susun($kegiatan, function (Sie $sie) {
             $kwitansi = [];
 
             $realisasi = fn ($item) => self::baris(
@@ -52,10 +55,56 @@ class LaporanDana
             foreach ($sie->items->whereNull('ID_Bon') as $item) {
                 $kwitansi[] = [
                     'total' => (float) $item->Total,
-                    'items' => [self::baris($item->Keterangan, $item->Qty, $item->Satuan, $item->Harga_Unit, $item->Total)],
+                    'items' => [self::itemProposal($item)],
                 ];
             }
 
+            return $kwitansi;
+        });
+
+        return $laporan + [
+            'judul' => ['XII. LAPORAN DANA', 'B. PENGELUARAN'],
+            'kolomKwitansi' => true,
+            'labelTotal' => 'TOTAL REALISASI DANA KEGIATAN',
+            // Proporsi kolom (%) dan posisi (pt) mengikuti dokumen Laporan Dana
+            'lebarKolom' => [4.4, 17.4, 15.2, 6.3, 10.2, 14.8, 15.2, 16.5],
+            'indentTabel' => 36,
+            'indentTerbilang' => 21,
+        ];
+    }
+
+    /**
+     * Proposal (RAB). Butuh relasi sie.items sudah di-eager-load.
+     *
+     * Proposal belum punya kwitansi, jadi kolom Total Kwitansi tidak ditampilkan dan semua
+     * item satu Sie cukup jadi satu grup. Tanpa judul: dokumen langsung dimulai dari tabel.
+     */
+    public static function anggaran(Kegiatan $kegiatan): array
+    {
+        $laporan = self::susun($kegiatan, function (Sie $sie) {
+            $items = $sie->items->map(fn ($item) => self::itemProposal($item))->values()->all();
+
+            return $items ? [['total' => (float) array_sum(array_column($items, 'total')), 'items' => $items]] : [];
+        });
+
+        return $laporan + [
+            'judul' => [],
+            'kolomKwitansi' => false,
+            'labelTotal' => 'TOTAL ANGGARAN DANA KEGIATAN',
+            // Lebar kolom Total Kwitansi dipindah ke Keterangan; tabel di tengah halaman
+            'lebarKolom' => [4.4, 17.4, 31.7, 6.3, 10.2, 14.8, 15.2],
+            'indentTabel' => 25,
+            'indentTerbilang' => 25,
+        ];
+    }
+
+    private static function susun(Kegiatan $kegiatan, callable $kwitansiPerSie): array
+    {
+        $sies = [];
+        $grandTotal = 0;
+
+        foreach ($kegiatan->sie->values() as $index => $sie) {
+            $kwitansi = $kwitansiPerSie($sie);
             $subtotal = array_sum(array_column($kwitansi, 'total'));
             $grandTotal += $subtotal;
 
@@ -73,6 +122,11 @@ class LaporanDana
             'grandTotal' => $grandTotal,
             'terbilang' => Terbilang::rupiah($grandTotal),
         ];
+    }
+
+    private static function itemProposal(Item $item): array
+    {
+        return self::baris($item->Keterangan, $item->Qty, $item->Satuan, $item->Harga_Unit, $item->Total);
     }
 
     public static function rupiah(float|int|string|null $nominal): string

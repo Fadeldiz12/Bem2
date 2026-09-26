@@ -4,11 +4,9 @@ namespace App\Http\Controllers\Rab;
 
 use App\Http\Controllers\Controller;
 
-use App\Exports\LpjExport;
-use App\Exports\LpjWordExport;
+use App\Exports\TabelDanaExport;
+use App\Exports\TabelDanaWordExport;
 use App\Helpers\LaporanDana;
-use App\Exports\RabExport;
-use App\Exports\RabWordExport;
 use App\Models\Kegiatan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -124,65 +122,63 @@ class KegiatanController extends Controller
     }
 
     // =====================================================================
-    // Export PDF & Excel (Proposal/RAB dan LPJ)
-    // Butuh package: barryvdh/laravel-dompdf, maatwebsite/excel
+    // Export PDF, Excel & Word (Proposal/RAB dan LPJ)
+    // Keduanya memakai format tabel dokumen "Laporan Dana - B. Pengeluaran":
+    // LPJ = LaporanDana::pengeluaran(), Proposal = LaporanDana::anggaran()
     // =====================================================================
 
     public function exportPdfRab(int $id)
     {
-        // Hanya perlu relasi ke sie dan items (RAB)
         $kegiatan = Kegiatan::with(['sie.items'])->findOrFail($id);
-        $sies = $kegiatan->sie;
 
-        // Menggunakan ukuran kertas portrait/A4 karena kolomnya tidak terlalu banyak
-        $pdf = Pdf::loadView('rab.proposal.export-pdf', compact('kegiatan', 'sies'))
-            ->setPaper('A4', 'portrait');
-
-        return $pdf->download('RAB_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.pdf');
+        return $this->pdfTabelDana($kegiatan, LaporanDana::anggaran($kegiatan), 'RAB');
     }
 
     public function exportExcelRab(int $id)
     {
-        $kegiatan = Kegiatan::findOrFail($id);
+        $kegiatan = Kegiatan::with(['sie.items'])->findOrFail($id);
 
-        return Excel::download(new RabExport($id), 'RAB_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.xlsx');
+        return Excel::download(new TabelDanaExport(LaporanDana::anggaran($kegiatan)), $this->namaFile('RAB', $kegiatan, 'xlsx'));
     }
 
     public function exportWordRab(int $id)
     {
         $kegiatan = Kegiatan::with(['sie.items'])->findOrFail($id);
 
-        return (new RabWordExport($kegiatan))
-            ->download('RAB_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.docx');
+        return (new TabelDanaWordExport(LaporanDana::anggaran($kegiatan)))->download($this->namaFile('RAB', $kegiatan, 'docx'));
     }
 
     public function exportPdf(int $id)
     {
         $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj'])->findOrFail($id);
-        $laporan = LaporanDana::pengeluaran($kegiatan);
 
-        // Format mengikuti dokumen "XII. Laporan Dana - B. Pengeluaran" (A4 portrait)
-        $pdf = Pdf::loadView('rab.lpj.export-pdf', compact('kegiatan', 'laporan'))
-            ->setPaper('A4', 'portrait')
-            ->setCallbacks(LaporanDana::pdfCallbacks());
-
-        return $pdf->download('LPJ_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.pdf');
+        return $this->pdfTabelDana($kegiatan, LaporanDana::pengeluaran($kegiatan), 'LPJ');
     }
 
     public function exportExcel(int $id)
     {
-        $kegiatan = Kegiatan::findOrFail($id);
+        $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj'])->findOrFail($id);
 
-        $lpjexport = new LpjExport($id);
-
-        return Excel::download($lpjexport, 'LPJ_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.xlsx');
+        return Excel::download(new TabelDanaExport(LaporanDana::pengeluaran($kegiatan)), $this->namaFile('LPJ', $kegiatan, 'xlsx'));
     }
 
     public function exportWord(int $id)
     {
         $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj'])->findOrFail($id);
 
-        return (new LpjWordExport(LaporanDana::pengeluaran($kegiatan)))
-            ->download('LPJ_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.docx');
+        return (new TabelDanaWordExport(LaporanDana::pengeluaran($kegiatan)))->download($this->namaFile('LPJ', $kegiatan, 'docx'));
+    }
+
+    private function pdfTabelDana(Kegiatan $kegiatan, array $laporan, string $jenis)
+    {
+        return Pdf::loadView('rab.export.tabel-dana-pdf', compact('kegiatan', 'laporan'))
+            ->setPaper('A4', 'portrait')
+            ->setCallbacks(LaporanDana::pdfCallbacks())
+            ->download($this->namaFile($jenis, $kegiatan, 'pdf'));
+    }
+
+    private function namaFile(string $jenis, Kegiatan $kegiatan, string $ekstensi): string
+    {
+        return $jenis.'_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.'.$ekstensi;
     }
 }
