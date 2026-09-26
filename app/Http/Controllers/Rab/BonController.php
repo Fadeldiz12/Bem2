@@ -34,7 +34,14 @@ class BonController extends Controller
      */
     public function store(Request $request)
     {
-        if ($request->has('baru_keterangan')) {
+        // Item tambahan LPJ yang belum punya kwitansi, dicentang untuk ditempel ke bon ini
+        $request->validate([
+            'lpj_ids' => 'nullable|array',
+            'lpj_ids.*' => 'integer|exists:item_lpj,ID_Item_LPJ',
+        ]);
+
+        // Item proposal wajib dipilih, kecuali bon ini berisi item tambahan
+        if ($request->has('baru_keterangan') || $request->filled('lpj_ids')) {
             $request->validate([
                 'kegiatan_id' => 'required',
                 'sie_id' => 'required',
@@ -103,6 +110,13 @@ class BonController extends Controller
                 }
             }
 
+            if ($request->filled('lpj_ids')) {
+                item_lpj::whereIn('ID_Item_LPJ', $request->lpj_ids)
+                    ->where('ID_Sie', $request->sie_id)
+                    ->whereNull('ID_Bon')
+                    ->update(['ID_Bon' => $bon->ID_Bon]);
+            }
+
             // 4. PROSES INPUT ITEM BARU (DI LUAR ANGGARAN PROPOSAL) jika ada
             if ($request->has('baru_keterangan')) {
                 foreach ($request->baru_keterangan as $key => $keterangan) {
@@ -121,6 +135,7 @@ class BonController extends Controller
                     DB::table('item_lpj')->insert([
                         'ID_Sie' => $request->sie_id,
                         'ID_Bon' => $bon->ID_Bon,
+                        'Di_Luar_Proposal' => true,
                         'Jenis_Pengeluaran' => $request->baru_jenis[$key],
                         'Keterangan' => $keterangan,
                         'Qty_Realisasi' => $request->baru_qty[$key],
@@ -169,12 +184,16 @@ class BonController extends Controller
             return $item->isNew;
         })->values();
 
+        // Item tambahan di Sie yang sama yang belum punya kwitansi (bisa dicentang masuk ke bon ini)
+        $availableNewItemsLpj = item_lpj::where('ID_Sie', '=', $bon->ID_Sie, 'and')->whereNull('ID_Bon')->get();
+
         return response()->json([
             'bon' => $bon,
             'linked_items' => $linkedItems,
             'item_lpj' => $itemLpj,
             'available_items' => $availableItems,
             'new_items_lpj' => $newItemsLpj,
+            'available_new_items_lpj' => $availableNewItemsLpj,
         ]);
     }
 
@@ -229,6 +248,7 @@ class BonController extends Controller
                     // Hapus dari tabel item_lpj juga
                     DB::table('item_lpj')
                         ->where('ID_Bon', $bon->ID_Bon)
+                        ->where('Di_Luar_Proposal', false)
                         ->where('Keterangan', $exItem->Keterangan)
                         ->where('Jenis_Pengeluaran', $exItem->Jenis_Pengeluaran)
                         ->where('ID_Sie', $exItem->ID_Sie)
@@ -252,6 +272,7 @@ class BonController extends Controller
 
                 $lpjExists = DB::table('item_lpj')
                     ->where('ID_Bon', $bon->ID_Bon)
+                    ->where('Di_Luar_Proposal', false)
                     ->where('Keterangan', $item->Keterangan)
                     ->first();
 
@@ -281,30 +302,26 @@ class BonController extends Controller
                 }
             }
 
-            // C. Kelola item baru (langsung dari item_lpj, di luar RAB awal)
+            // C. Kelola item tambahan (di luar RAB awal)
             $submittedNewLpjIds = $request->new_lpj_ids ?? [];
-            $existingNewLpj = item_lpj::where('ID_Bon', '=', $bon->ID_Bon, 'and')->get()->filter->isNew;
 
-            foreach ($existingNewLpj as $exLpj) {
-                if (! in_array($exLpj->ID_Item_LPJ, $submittedNewLpjIds)) {
-                    // Hapus item baru jika di-uncheck
-                    DB::table('item_lpj')->where('ID_Item_LPJ', $exLpj->ID_Item_LPJ)->delete();
-                }
-            }
+            // Yang di-uncheck dilepas dari bon ini (jadi item tambahan tanpa kwitansi), tidak dihapus
+            item_lpj::where('ID_Bon', '=', $bon->ID_Bon, 'and')
+                ->where('Di_Luar_Proposal', true)
+                ->whereNotIn('ID_Item_LPJ', $submittedNewLpjIds)
+                ->update(['ID_Bon' => null]);
 
-            // Update remaining new items
+            // Yang dicentang: nilai realisasinya diperbarui dan ditempel ke bon ini
             foreach ($submittedNewLpjIds as $lpjId) {
-                $qty = $request->realisasi_qty_new[$lpjId];
-                $harga = $request->realisasi_harga_new[$lpjId];
-                $satuan = $request->realisasi_satuan_new[$lpjId];
-
-                DB::table('item_lpj')
-                    ->where('ID_Item_LPJ', $lpjId)
+                item_lpj::where('ID_Item_LPJ', $lpjId)
+                    ->where('ID_Sie', $bon->ID_Sie)
+                    ->where('Di_Luar_Proposal', true)
+                    ->where(fn ($q) => $q->where('ID_Bon', $bon->ID_Bon)->orWhereNull('ID_Bon'))
                     ->update([
-                        'Qty_Realisasi' => $qty,
-                        'Satuan_Realisasi' => $satuan,
-                        'Harga_Realisasi' => $harga,
-                        'updated_at' => now(),
+                        'ID_Bon' => $bon->ID_Bon,
+                        'Qty_Realisasi' => $request->realisasi_qty_new[$lpjId],
+                        'Satuan_Realisasi' => $request->realisasi_satuan_new[$lpjId],
+                        'Harga_Realisasi' => $request->realisasi_harga_new[$lpjId],
                     ]);
             }
 
@@ -328,8 +345,9 @@ class BonController extends Controller
             // 1. Putuskan hubungan item (kembalikan item ke status "tersedia")
             Item::where('ID_Bon', '=', $bon->ID_Bon, 'and')->update(['ID_Bon' => null]);
 
-            // 2. Hapus catatan realisasinya
-            DB::table('item_lpj')->where('ID_Bon', $bon->ID_Bon)->delete();
+            // 2. Hapus catatan realisasi item proposal; item tambahan tetap ada tanpa kwitansi
+            DB::table('item_lpj')->where('ID_Bon', $bon->ID_Bon)->where('Di_Luar_Proposal', false)->delete();
+            item_lpj::where('ID_Bon', '=', $bon->ID_Bon, 'and')->update(['ID_Bon' => null]);
 
             // 3. Hapus foto fisiknya
             if ($bon->Foto_Bon && File::exists(public_path('uploads/bon/'.$bon->Foto_Bon))) {
@@ -341,7 +359,7 @@ class BonController extends Controller
 
             DB::commit();
 
-            return redirect()->back()->with('success', 'Bon berhasil dihapus beserta seluruh realisasinya.');
+            return redirect()->back()->with('success', 'Bon berhasil dihapus. Realisasi item proposal dikosongkan, item tambahan tetap ada tanpa kwitansi.');
         } catch (\Exception $e) {
             DB::rollback();
 

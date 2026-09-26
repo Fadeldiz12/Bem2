@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Rab;
 use App\Http\Controllers\Controller;
 
 use App\Exports\LpjExport;
+use App\Exports\LpjWordExport;
 use App\Helpers\LaporanDana;
 use App\Exports\RabExport;
+use App\Exports\RabWordExport;
 use App\Models\Kegiatan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -74,7 +76,7 @@ class KegiatanController extends Controller
             // Reload dengan eager load sie.item_lpj.bon (dipakai untuk kalkulasi
             // realisasi, dan untuk menyaring baris item_lpj yang Bon-nya sudah
             // tidak ada lagi di database / data nyasar).
-            $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj.bon'])->findOrFail($id);
+            $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj.bon', 'sie.bons'])->findOrFail($id);
             $sie = $kegiatan->sie;
 
             return view('rab.lpj.show', compact('kegiatan', 'sie'));
@@ -146,6 +148,14 @@ class KegiatanController extends Controller
         return Excel::download(new RabExport($id), 'RAB_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.xlsx');
     }
 
+    public function exportWordRab(int $id)
+    {
+        $kegiatan = Kegiatan::with(['sie.items'])->findOrFail($id);
+
+        return (new RabWordExport($kegiatan))
+            ->download('RAB_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.docx');
+    }
+
     public function exportPdf(int $id)
     {
         $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj'])->findOrFail($id);
@@ -166,5 +176,13 @@ class KegiatanController extends Controller
         $lpjexport = new LpjExport($id);
 
         return Excel::download($lpjexport, 'LPJ_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.xlsx');
+    }
+
+    public function exportWord(int $id)
+    {
+        $kegiatan = Kegiatan::with(['sie.items', 'sie.item_lpj'])->findOrFail($id);
+
+        return (new LpjWordExport(LaporanDana::pengeluaran($kegiatan)))
+            ->download('LPJ_'.str_replace(' ', '_', $kegiatan->Nama_Kegiatan).'.docx');
     }
 }

@@ -14,7 +14,8 @@ class LaporanDana
      * Butuh relasi sie.items dan sie.item_lpj sudah di-eager-load.
      *
      * Per Sie, item dikelompokkan per kwitansi: item_lpj per ID_Bon (realisasi),
-     * lalu item RAB yang belum punya bon, masing-masing jadi kwitansi sendiri.
+     * lalu item tambahan yang belum punya bon, lalu item RAB yang belum punya bon
+     * (keduanya masing-masing jadi kwitansi sendiri).
      */
     public static function pengeluaran(Kegiatan $kegiatan): array
     {
@@ -24,16 +25,27 @@ class LaporanDana
         foreach ($kegiatan->sie->values() as $index => $sie) {
             $kwitansi = [];
 
-            foreach ($sie->item_lpj->groupBy('ID_Bon') as $items) {
+            $realisasi = fn ($item) => self::baris(
+                $item->Keterangan,
+                $item->Qty_Realisasi,
+                $item->Satuan_Realisasi,
+                $item->Harga_Realisasi,
+                $item->Total_Realisasi,
+            );
+            [$denganBon, $tanpaBon] = $sie->item_lpj->partition(fn ($item) => $item->ID_Bon !== null);
+
+            foreach ($denganBon->groupBy('ID_Bon') as $items) {
                 $kwitansi[] = [
                     'total' => (float) $items->sum('Total_Realisasi'),
-                    'items' => $items->map(fn ($item) => self::baris(
-                        $item->Keterangan,
-                        $item->Qty_Realisasi,
-                        $item->Satuan_Realisasi,
-                        $item->Harga_Realisasi,
-                        $item->Total_Realisasi,
-                    ))->values()->all(),
+                    'items' => $items->map($realisasi)->values()->all(),
+                ];
+            }
+
+            // Item tambahan yang kwitansinya belum dihubungkan: satu baris masing-masing
+            foreach ($tanpaBon as $item) {
+                $kwitansi[] = [
+                    'total' => (float) $item->Total_Realisasi,
+                    'items' => [$realisasi($item)],
                 ];
             }
 

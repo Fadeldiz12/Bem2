@@ -12,7 +12,7 @@
                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
                         </path>
                     </svg>
-                    <h3 class="text-red-800 font-bold text-sm">Gagal Menyimpan Bon</h3>
+                    <h3 class="text-red-800 font-bold text-sm">Gagal Menyimpan Data</h3>
                 </div>
                 <ul class="list-disc list-inside text-red-600 text-xs ml-7 space-y-1">
                     @foreach ($errors->all() as $error)
@@ -35,6 +35,15 @@
                 <p class="text-gray-500 text-sm">Laporan Penanggung Jawaban — Format LPJ</p>
             </div>
             <div class="flex flex-wrap gap-2">
+                <a href="{{ route('lpj.export.word', $kegiatan->ID_Kegiatan) }}"
+                    class="bg-[#2B579A] hover:bg-[#1E3F73] text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    Export Word
+                </a>
                 <a href="{{ route('lpj.export.pdf', $kegiatan->ID_Kegiatan) }}"
                     class="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,21 +53,6 @@
                     </svg>
                     Cetak PDF
                 </a>
-                <button onclick="toggleModalBon()"
-                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Tambah Bon
-                </button>
-                <!-- Tombol ini akan membuka Modal -->
-                {{-- <button onclick="toggleModal()"
-                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Tambah Item
-                </button> --}}
                 <a href="{{ route('lpj.export.excel', $kegiatan->ID_Kegiatan) }}"
                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,6 +62,13 @@
                     </svg>
                     Export Excel
                 </a>
+                <button onclick="toggleModalBon()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Tambah Bon
+                </button>
             </div>
         </div>
 
@@ -88,6 +89,7 @@
                         </tr>
                     </thead>
                     <tbody class="text-sm text-gray-700">
+                        @php $grandTotal = 0; @endphp
                         @forelse ($sie as $index => $s)
                             <tr class="bg-purple-200 border-b border-purple-300">
                                 <td colspan="8" class="px-6 py-3">
@@ -95,17 +97,29 @@
                                         <span class="text-purple-900 font-bold text-sm uppercase tracking-wider">
                                             {{ $s->Nama_Sie }}
                                         </span>
+                                        <button type="button" onclick="bukaModalItemTambahan(this)"
+                                            data-sie-id="{{ $s->ID_Sie }}" data-sie-nama="{{ $s->Nama_Sie }}"
+                                            title="Tambah item yang tidak ada di proposal (kebutuhan mendadak)"
+                                            class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 text-xs font-medium transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 4v16m8-8H4"></path>
+                                            </svg>
+                                            Tambah Item
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
 
                             @php
                                 $no = 1;
-                                // Kelompokkan item berdasarkan ID_Bon
-                                $itemsWithBon = $s->item_lpj->groupBy('ID_Bon');
+                                // Realisasi yang sudah punya kwitansi dikelompokkan per ID_Bon;
+                                // item tambahan yang kwitansinya belum dihubungkan ditampilkan terpisah.
+                                [$lpjDenganBon, $tambahanTanpaBon] = $s->item_lpj->partition(fn ($i) => $i->ID_Bon !== null);
+                                $itemsWithBon = $lpjDenganBon->groupBy('ID_Bon');
 
                                 $itemsWithoutBon = $s->items->whereNull('ID_Bon');
-                                $hasItems = $s->items->count() > 0;
+                                $hasItems = $s->items->isNotEmpty() || $s->item_lpj->isNotEmpty();
                                 $subtotalSie = 0; // Variabel untuk menghitung total aktual (RAB + LPJ)
                             @endphp
 
@@ -127,12 +141,14 @@
                                             <td class="px-6 py-4">{{ $no++ }}</td>
                                             <td class="px-6 py-4 font-medium text-gray-900">
                                                 {{ $item->Jenis_Pengeluaran }}
-                                                @if ($item->created_at == $item->updated_at && $item->isNew)
+                                                @if ($item->isNew)
                                                     <span
-                                                        class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">Baru</span>
+                                                        class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">Tambahan</span>
                                                 @endif
                                             </td>
-                                            <td class="px-6 py-4">{{ $item->Keterangan }}</td>
+                                            <td class="px-6 py-4">
+                                                @include('rab.lpj.partials.keterangan-item', ['item' => $item, 'namaSie' => $s->Nama_Sie])
+                                            </td>
                                             <td class="px-6 py-4 font-semibold text-blue-700">{{ $qtyTampil }}</td>
                                             <td class="px-6 py-4">{{ $satuanTampil }}</td>
                                             <td class="px-6 py-4 font-semibold text-blue-700">Rp
@@ -169,7 +185,36 @@
                                     @endforeach
                                 @endforeach
 
-                                {{-- BAGIAN B: BELUM ADA BON (TAMPILKAN ITEM RAB ASLI) --}}
+                                {{-- BAGIAN B: ITEM TAMBAHAN (DI LUAR PROPOSAL) YANG BELUM PUNYA KWITANSI --}}
+                                @foreach ($tambahanTanpaBon as $item)
+                                    @php $subtotalSie += $item->Total_Realisasi; @endphp
+                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition bg-amber-50/40">
+                                        <td class="px-6 py-4">{{ $no++ }}</td>
+                                        <td class="px-6 py-4 font-medium text-gray-900">
+                                            {{ $item->Jenis_Pengeluaran }}
+                                            <span
+                                                class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">Tambahan</span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            @include('rab.lpj.partials.keterangan-item', ['item' => $item, 'namaSie' => $s->Nama_Sie])
+                                        </td>
+                                        <td class="px-6 py-4">{{ $item->Qty_Realisasi }}</td>
+                                        <td class="px-6 py-4">{{ $item->Satuan_Realisasi }}</td>
+                                        <td class="px-6 py-4">Rp {{ number_format($item->Harga_Realisasi, 0, ',', '.') }}</td>
+                                        <td class="px-6 py-4 font-semibold text-gray-600">Rp
+                                            {{ number_format($item->Total_Realisasi, 0, ',', '.') }}</td>
+                                        <td class="px-6 py-4 text-center border-l border-gray-100">
+                                            <button title="Hubungkan ke kwitansi"
+                                                onclick="bukaBonSpesifikSie('{{ $s->ID_Sie }}')"
+                                                class="px-4 py-1.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition shadow-sm">
+                                                Isi Bukti
+                                            </button>
+                                            <p class="mt-1 text-[10px] text-amber-700">Belum ada kwitansi</p>
+                                        </td>
+                                    </tr>
+                                @endforeach
+
+                                {{-- BAGIAN C: BELUM ADA BON (TAMPILKAN ITEM RAB ASLI) --}}
                                 @foreach ($itemsWithoutBon as $item)
                                     @php $subtotalSie += $item->Total; @endphp
                                     <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
@@ -210,6 +255,7 @@
                                     </div>
                                 </td>
                             </tr>
+                            @php $grandTotal += $subtotalSie; @endphp
                         @empty
                             <tr>
                                 <td colspan="8" class="px-6 py-8 text-center text-gray-500">
@@ -222,8 +268,7 @@
                     <tfoot>
                         <tr class="bg-purple-700 text-white text-sm font-bold uppercase tracking-wider">
                             <td colspan="6" class="px-6 py-4 text-right">TOTAL KESELURUHAN</td>
-                            <td colspan="2" class="px-6 py-4">
-                                {{ number_format($kegiatan->items->sum('Total'), 0, ',', '.') }}</td>
+                            <td colspan="2" class="px-6 py-4">Rp {{ number_format($grandTotal, 0, ',', '.') }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -392,6 +437,83 @@
             </div>
         </div>
 
+        {{-- Modal Tambah / Edit Item Tambahan (kebutuhan mendadak di luar proposal) --}}
+        <div id="itemTambahanModal"
+            class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl animate-fade-in-up max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <h2 id="itemTambahanJudul" class="text-xl font-bold text-purple-900 mb-1">Tambah Item Tambahan</h2>
+                    <p class="text-sm text-purple-600">Sie: <span id="itemTambahanSie" class="font-bold"></span></p>
+                    <p class="text-xs text-gray-500 mb-6">Untuk kebutuhan mendadak yang tidak ada di proposal. Data proposal tidak ikut berubah.</p>
+
+                    <form id="formItemTambahan" action="{{ route('ItemLpj.store') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="_method" id="itemTambahanMethod" value="POST">
+                        <input type="hidden" name="sie_id" id="itemTambahanSieId">
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Jenis Pengeluaran</label>
+                            <select name="Jenis_Pengeluaran" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-gray-600">
+                                <option value="Konsumsi">Konsumsi</option>
+                                <option value="Perlengkapan">Perlengkapan</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Keterangan</label>
+                            <input type="text" name="Keterangan" required maxlength="255"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                                placeholder="Contoh: Lakban Hitam">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-2">Volume/Jumlah</label>
+                                <input type="number" name="Qty" required min="1"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                                    placeholder="Contoh: 2">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-2">Satuan</label>
+                                <input type="text" name="Satuan" required maxlength="100"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                                    placeholder="Contoh: Roll">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Harga/Unit (@)</label>
+                            <input type="number" name="Harga" required min="0" step="any"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                                placeholder="Contoh: 15000">
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Kwitansi / Bon</label>
+                            <select name="bon_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-gray-600">
+                                <option value="">Belum ada kwitansi (hubungkan nanti)</option>
+                            </select>
+                            <p class="text-[11px] text-gray-500 mt-1">Kwitansi baru dibuat lewat tombol "Tambah Bon", lalu centang item ini.</p>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button type="submit"
+                                class="flex-1 bg-purple-700 hover:bg-purple-800 text-white font-bold py-2.5 px-4 rounded-lg transition">
+                                Simpan
+                            </button>
+                            <button type="button" onclick="tutupModalItemTambahan()"
+                                class="flex-1 bg-red-800 hover:bg-red-900 text-white font-bold py-2.5 px-4 rounded-lg transition">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         {{-- Modal Bon --}}
         <div id="bonModal"
             class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -542,6 +664,29 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                        @endforeach
+
+                                        {{-- Item tambahan (di luar proposal) yang kwitansinya belum dihubungkan --}}
+                                        @foreach ($s->item_lpj->whereNull('ID_Bon') as $item)
+                                            <label
+                                                class="flex items-start justify-between gap-3 border border-amber-200 bg-amber-50 rounded-lg p-3 hover:bg-amber-100 transition cursor-pointer">
+                                                <span class="flex items-start gap-3">
+                                                    <input type="checkbox" name="lpj_ids[]" value="{{ $item->ID_Item_LPJ }}"
+                                                        class="mt-1 w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500">
+                                                    <span>
+                                                        <span class="block text-sm font-semibold text-gray-800">
+                                                            {{ $item->Keterangan }}
+                                                            <span class="ml-1 px-1.5 py-0.5 bg-amber-200 text-amber-800 text-[10px] rounded-full">Tambahan</span>
+                                                        </span>
+                                                        <span class="block text-xs text-gray-500">Realisasi: {{ $item->Qty_Realisasi }}
+                                                            {{ $item->Satuan_Realisasi }} @ Rp
+                                                            {{ number_format($item->Harga_Realisasi, 0, ',', '.') }}</span>
+                                                    </span>
+                                                </span>
+                                                <span class="text-xs font-bold text-gray-600 bg-white px-2 py-0.5 rounded">
+                                                    Rp {{ number_format($item->Total_Realisasi, 0, ',', '.') }}
+                                                </span>
+                                            </label>
                                         @endforeach
                                     </div>
                                 @endforeach
@@ -964,6 +1109,11 @@
                             .Satuan, item.Harga_Unit));
                     });
 
+                    // Item tambahan di Sie ini yang belum punya kwitansi (belum tercentang)
+                    (data.available_new_items_lpj || []).forEach(lpjItem => {
+                        container.insertAdjacentHTML('beforeend', createNewItemHTML(lpjItem, false));
+                    });
+
                 })
                 .catch(err => {
                     console.error('Fetch Error:', err);
@@ -990,10 +1140,17 @@
         // Konfirmasi penghapusan Bon
         function confirmDeleteBon() {
             if (confirm(
-                    "Apakah Anda yakin ingin menghapus kuitansi ini secara permanen? Semua realisasi di dalamnya akan dikembalikan ke status kosong."
+                    "Apakah Anda yakin ingin menghapus kuitansi ini secara permanen? Realisasi item proposal di dalamnya akan dikembalikan ke status kosong, sedangkan item tambahan tetap ada tanpa kwitansi."
                 )) {
                 document.getElementById('formDeleteBon').submit();
             }
+        }
+
+        // Teks dari database (input user) di-escape sebelum disisipkan lewat innerHTML
+        function esc(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[c]);
         }
 
         // Fungsi helper untuk membangun HTML form item di dalam modal
@@ -1010,16 +1167,16 @@
         <div class="flex items-start gap-3">
             <input type="checkbox" name="item_ids[]" value="${item.ID_Item}" ${checkedAttr}
                 class="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                data-qty="${item.Qty}" data-satuan="${item.Satuan}" data-harga="${item.Harga_Unit}"
+                data-qty="${item.Qty}" data-satuan="${esc(item.Satuan)}" data-harga="${item.Harga_Unit}"
                 onchange="toggleEditItemForm(this)">
             <div class="flex-1">
                 <div class="flex justify-between items-start">
-                    <p class="text-sm font-semibold text-gray-800">${item.Keterangan}</p>
+                    <p class="text-sm font-semibold text-gray-800">${esc(item.Keterangan)}</p>
                     <span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
                         Rp ${new Intl.NumberFormat('id-ID').format(item.Harga_Unit * item.Qty)}
                     </span>
                 </div>
-                <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Anggaran Asli: ${item.Qty} ${item.Satuan} @ Rp ${new Intl.NumberFormat('id-ID').format(item.Harga_Unit)}</p>
+                <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Anggaran Asli: ${item.Qty} ${esc(item.Satuan)} @ Rp ${new Intl.NumberFormat('id-ID').format(item.Harga_Unit)}</p>
                 
                 <div class="edit-realisasi-container ${displayClass} border-t pt-2 grid grid-cols-3 gap-2">
                     <div>
@@ -1028,7 +1185,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-gray-600 mb-0.5">Satuan</label>
-                        <input type="text" name="realisasi_satuan[${item.ID_Item}]" value="${realSatuan}" ${disableAttr} required class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-purple-600">
+                        <input type="text" name="realisasi_satuan[${item.ID_Item}]" value="${esc(realSatuan)}" ${disableAttr} required class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-purple-600">
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-gray-600 mb-0.5">Harga Unit</label>
@@ -1053,12 +1210,12 @@
                 onchange="toggleEditItemForm(this)">
             <div class="flex-1">
                 <div class="flex justify-between items-start">
-                    <p class="text-sm font-semibold text-gray-800">${lpjItem.Keterangan} <span class="ml-1 px-1.5 py-0.5 bg-amber-200 text-amber-800 text-[10px] rounded-full">Item Baru</span></p>
+                    <p class="text-sm font-semibold text-gray-800">${esc(lpjItem.Keterangan)} <span class="ml-1 px-1.5 py-0.5 bg-amber-200 text-amber-800 text-[10px] rounded-full">Tambahan</span></p>
                     <span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
                         Rp ${new Intl.NumberFormat('id-ID').format(lpjItem.Harga_Realisasi * lpjItem.Qty_Realisasi)}
                     </span>
                 </div>
-                <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Realisasi: ${lpjItem.Qty_Realisasi} ${lpjItem.Satuan_Realisasi} @ Rp ${new Intl.NumberFormat('id-ID').format(lpjItem.Harga_Realisasi)}</p>
+                <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Realisasi: ${lpjItem.Qty_Realisasi} ${esc(lpjItem.Satuan_Realisasi)} @ Rp ${new Intl.NumberFormat('id-ID').format(lpjItem.Harga_Realisasi)}</p>
                 
                 <div class="edit-realisasi-container ${displayClass} border-t border-amber-200 pt-2 grid grid-cols-3 gap-2">
                     <div>
@@ -1067,7 +1224,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-gray-600 mb-0.5">Satuan</label>
-                        <input type="text" name="realisasi_satuan_new[${lpjItem.ID_Item_LPJ}]" value="${lpjItem.Satuan_Realisasi}" ${disableAttr} required class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-amber-500 bg-white">
+                        <input type="text" name="realisasi_satuan_new[${lpjItem.ID_Item_LPJ}]" value="${esc(lpjItem.Satuan_Realisasi)}" ${disableAttr} required class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-amber-500 bg-white">
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-gray-600 mb-0.5">Harga Unit</label>
@@ -1093,6 +1250,51 @@
                 container.classList.remove('block');
                 inputs.forEach(input => input.disabled = true);
             }
+        }
+
+        // ===== Item tambahan (kebutuhan mendadak di luar proposal) =====
+        const kwitansiPerSie = @json($sie->mapWithKeys(fn ($s) => [
+            $s->ID_Sie => $s->bons->map(fn ($b) => ['id' => $b->ID_Bon, 'nama' => $b->Nama_Bon])->values(),
+        ]));
+        const urlTambahItem = @json(route('ItemLpj.store'));
+        const urlEditItem = @json(route('ItemLpj.update', '__ID__'));
+
+        // Tanpa data-item-id = tambah baru; dengan data-item-id = edit item tersebut
+        function bukaModalItemTambahan(tombol) {
+            const data = tombol.dataset;
+            const edit = Boolean(data.itemId);
+            const form = document.getElementById('formItemTambahan');
+            const field = name => form.elements.namedItem(name);
+
+            form.reset();
+            form.action = edit ? urlEditItem.replace('__ID__', data.itemId) : urlTambahItem;
+            document.getElementById('itemTambahanMethod').value = edit ? 'PUT' : 'POST';
+            document.getElementById('itemTambahanJudul').textContent = edit ? 'Edit Item Tambahan' : 'Tambah Item Tambahan';
+            document.getElementById('itemTambahanSie').textContent = data.sieNama;
+            document.getElementById('itemTambahanSieId').value = data.sieId;
+
+            const kwitansi = field('bon_id');
+            kwitansi.length = 1; // sisakan opsi "Belum ada kwitansi"
+            (kwitansiPerSie[data.sieId] || []).forEach(bon => kwitansi.add(new Option(bon.nama, bon.id)));
+
+            if (edit) {
+                const jenis = field('Jenis_Pengeluaran');
+                if (![...jenis.options].some(option => option.value === data.jenis)) {
+                    jenis.add(new Option(data.jenis, data.jenis));
+                }
+                jenis.value = data.jenis;
+                field('Keterangan').value = data.keterangan;
+                field('Qty').value = data.qty;
+                field('Satuan').value = data.satuan;
+                field('Harga').value = data.harga;
+                kwitansi.value = data.bonId || '';
+            }
+
+            document.getElementById('itemTambahanModal').classList.remove('hidden');
+        }
+
+        function tutupModalItemTambahan() {
+            document.getElementById('itemTambahanModal').classList.add('hidden');
         }
     </script>
 @endsection

@@ -12,6 +12,15 @@
                 <p class="text-gray-500 text-sm">Rencana Anggaran Biaya — Format Proposal</p>
             </div>
             <div class="flex flex-wrap gap-2">
+                <a href="{{ route('proposal.export.word', $kegiatan->ID_Kegiatan) }}"
+                    class="bg-[#2B579A] hover:bg-[#1E3F73] text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    Export Word
+                </a>
                 <a href="{{ route('proposal.export.pdf', $kegiatan->ID_Kegiatan) }}"
                     class="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -21,21 +30,6 @@
                     </svg>
                     Cetak PDF
                 </a>
-                <button onclick="toggleModalSie()"
-                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Tambah Sie
-                </button>
-                <!-- Tombol ini akan membuka Modal -->
-                {{-- <button onclick="toggleModal()"
-                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Tambah Item
-                </button> --}}
                 <a href="{{ route('proposal.export.excel', $kegiatan->ID_Kegiatan) }}"
                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,6 +39,13 @@
                     </svg>
                     Export Excel
                 </a>
+                <button onclick="toggleModalSie()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Tambah Sie
+                </button>
             </div>
         </div>
 
