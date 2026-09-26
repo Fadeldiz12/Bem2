@@ -13,6 +13,7 @@ use App\Http\Controllers\Rab\KegiatanController;
 use App\Http\Controllers\Rab\SieController;
 use App\Http\Controllers\Rab\BonController;
 use App\Http\Controllers\Rab\ItemController;
+use App\Http\Controllers\Rab\ItemLpjController;
 use App\Models\User;
 
 // ===================== PUBLIC =====================
@@ -220,6 +221,7 @@ Route::middleware(['noindex', 'role:super_admin,admin'])->group(function () {
 
     Route::get('/proposal/{id}/export-pdf', [KegiatanController::class, 'exportPdfRab'])->name('proposal.export.pdf');
     Route::get('/proposal/{id}/export-excel', [KegiatanController::class, 'exportExcelRab'])->name('proposal.export.excel');
+    Route::get('/proposal/{id}/export-word', [KegiatanController::class, 'exportWordRab'])->name('proposal.export.word');
 
     Route::get('/lpj', [KegiatanController::class, 'index'])->name('lpj.index');
     Route::get('/lpj/{id}/rab', [KegiatanController::class, 'show'])->name('lpj.show');
@@ -229,8 +231,13 @@ Route::middleware(['noindex', 'role:super_admin,admin'])->group(function () {
     Route::put('/lpj/edit-bon/{bon}', [BonController::class, 'update'])->name('Bon.update');
     Route::delete('/lpj/hapus-bon/{bon}', [BonController::class, 'destroy'])->name('Bon.destroy');
 
+    Route::post('/lpj/tambah-item', [ItemLpjController::class, 'store'])->name('ItemLpj.store');
+    Route::put('/lpj/edit-item/{itemLpj}', [ItemLpjController::class, 'update'])->name('ItemLpj.update');
+    Route::delete('/lpj/hapus-item/{itemLpj}', [ItemLpjController::class, 'destroy'])->name('ItemLpj.destroy');
+
     Route::get('/lpj/{id}/export-pdf', [KegiatanController::class, 'exportPdf'])->name('lpj.export.pdf');
     Route::get('/lpj/{id}/export-excel', [KegiatanController::class, 'exportExcel'])->name('lpj.export.excel');
+    Route::get('/lpj/{id}/export-word', [KegiatanController::class, 'exportWord'])->name('lpj.export.word');
 
     Route::get('/lpj/create', function () {
         return view('rab.lpj.create');

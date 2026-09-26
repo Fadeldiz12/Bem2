@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\File;
 
 class Bon extends Model
 {
@@ -26,6 +27,28 @@ class Bon extends Model
     public function items()
     {
         return $this->hasMany(Item::class, 'ID_Bon', 'ID_Bon');
+    }
+
+    public function itemLpj()
+    {
+        return $this->hasMany(item_lpj::class, 'ID_Bon', 'ID_Bon');
+    }
+
+    /**
+     * Bon hanya tampil lewat item-itemnya, jadi bon tanpa item satu pun jadi data
+     * yatim. Dipanggil setelah item terakhirnya dihapus / dipindah.
+     */
+    public function hapusJikaKosong(): bool
+    {
+        if ($this->itemLpj()->exists() || $this->items()->exists()) {
+            return false;
+        }
+
+        if ($this->Foto_Bon && File::exists(public_path('uploads/bon/'.$this->Foto_Bon))) {
+            File::delete(public_path('uploads/bon/'.$this->Foto_Bon));
+        }
+
+        return (bool) $this->delete();
     }
 
     /**

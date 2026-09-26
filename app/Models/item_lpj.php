@@ -12,8 +12,12 @@ class item_lpj extends Model
     protected $primaryKey = 'ID_Item_LPJ';
 
     protected $fillable = [
-        'ID_Sie', 'ID_Bon', 'Jenis_Pengeluaran',
+        'ID_Sie', 'ID_Bon', 'Di_Luar_Proposal', 'Jenis_Pengeluaran',
         'Keterangan', 'Qty_Realisasi', 'Satuan_Realisasi', 'Harga_Realisasi',
+    ];
+
+    protected $casts = [
+        'Di_Luar_Proposal' => 'boolean',
     ];
 
     protected $appends = [
@@ -34,18 +38,12 @@ class item_lpj extends Model
     }
 
     /**
-     * Menandai realisasi yang TIDAK ADA padanannya di rencana anggaran
-     * awal (Item) — dicocokkan lewat ID_Bon + Jenis_Pengeluaran + Keterangan.
-     * Dipakai untuk highlight "item baru" (di luar RAB awal) di halaman LPJ.
+     * Realisasi yang TIDAK ADA di rencana anggaran awal (item tambahan /
+     * kebutuhan mendadak saat acara). Ditandai lewat kolom Di_Luar_Proposal.
      */
     public function getIsNewAttribute() : bool
     {
-        $existsInItem = Item::where('ID_Bon', '=', $this->ID_Bon, 'and')
-            ->where('Jenis_Pengeluaran', $this->Jenis_Pengeluaran)
-            ->where('Keterangan', $this->Keterangan)
-            ->exists();
-
-        return ! $existsInItem;
+        return (bool) $this->Di_Luar_Proposal;
     }
 
     /**
