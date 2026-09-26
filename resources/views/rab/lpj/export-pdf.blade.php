@@ -1,145 +1,132 @@
+@php
+    use App\Helpers\LaporanDana;
+
+    // Kolom "gabungan" (No/Jenis per Sie, Total Kwitansi per bon) sengaja TIDAK memakai rowspan:
+    // dompdf membuang sel rowspan lanjutan saat tabel pindah halaman sehingga kolom bergeser.
+    // Sebagai gantinya tiap baris punya selnya sendiri dan garis di dalam grup dihilangkan.
+    $barisLabel = fn (int $i, int $n) => $i === intdiv($n, 2);
+    $labelGenap = fn (int $i, int $n) => $barisLabel($i, $n) && $n % 2 === 0;
+    $kelasGrup = fn (int $i, int $n) => trim(
+        ($i > 0 ? 'lanjut-atas ' : '') .
+        ($i < $n - 1 ? 'lanjut-bawah ' : '') .
+        ($labelGenap($i, $n) ? 'label-genap' : '')
+    );
+
+    $lebarKolom = [4.4, 17.4, 15.2, 6.3, 10.2, 14.8, 15.2, 16.5];
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Export PDF LPJ</title>
+    <title>Laporan Dana - {{ $kegiatan->Nama_Kegiatan }}</title>
     <style>
-        body { font-family: sans-serif; font-size: 10px; }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            text-align: center;
-            background-color: #4285F4;
-            color: #FFFFFF;
-            padding: 10px;
+        @page { margin: 2.5cm 2.5cm 2.5cm 3cm; }
+        body { margin: 0; font-family: "Times New Roman", Times, serif; font-size: 9pt; color: #000; }
+
+        .judul { margin: 0 0 8pt 0; font-size: 12pt; font-weight: bold; }
+        .subjudul { margin: 0 0 9pt 21pt; font-size: 12pt; font-weight: bold; }
+
+        table.pengeluaran { width: 390pt; margin-left: 36pt; border-collapse: collapse; table-layout: fixed; }
+        .pengeluaran td {
+            border: 0.75pt solid #000; padding: 1.5pt 2pt; height: 16pt;
+            text-align: center; vertical-align: middle; line-height: 1.1;
         }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #4285F4; padding: 4px; vertical-align: middle; }
-        th { text-align: center; }
+        .pengeluaran tr { page-break-inside: avoid; }
+        /* thead diulang dompdf di tiap halaman: dipakai sebagai garis atas tabel di halaman lanjutan */
+        .pengeluaran thead td { height: 0; padding: 0; border: none; border-bottom: 0.75pt solid #000; }
 
-        /* Palet warna diambil dari screenshot referensi */
-        .header-row { background-color: #4285F4; color: #FFFFFF; font-weight: bold; }
-        .group-cell { background-color: #CFE2F3; }
-        .subtotal-row { background-color: #CFE2F3; font-weight: bold; }
+        .kepala td { background-color: #6A1B9A; color: #FFFFFF; font-weight: bold; }
+        .grup, .subtotal td { background-color: #E3D4F7; }
+        .subtotal td { font-weight: bold; }
+        .total td { background-color: #6A1B9A; color: #FFFFFF; font-weight: bold; }
 
-        .ttd-container { width: 100%; margin-top: 30px; }
-        .ttd-box { width: 33%; float: left; text-align: center; }
-        .font-bold { font-weight: bold; }
+        .pengeluaran td.lanjut-atas { border-top: none; }
+        .pengeluaran td.lanjut-bawah { border-bottom: none; }
+        /* Grup berjumlah genap: label ada di baris tengah-bawah lalu dinaikkan setengah baris
+           supaya jatuh di tengah grup (dinaikkan, bukan diturunkan, agar tidak tertutup
+           background baris berikutnya yang digambar belakangan). */
+        .pengeluaran td.label-genap { vertical-align: top; }
+        .label-genap span { position: relative; top: -7pt; }
+        /* Baris berlabel genap tidak boleh jadi baris pertama di halaman baru (label naik ke atas tabel) */
+        .pengeluaran tr.tahan { page-break-before: avoid; }
+        .subtotal td.grup { font-weight: normal; }
+
+        .terbilang { margin: 14pt 0 0 21pt; font-size: 12pt; line-height: 1.5; text-align: justify; }
     </style>
 </head>
 <body>
+    <p class="judul">XII. LAPORAN DANA</p>
+    <p class="subjudul">B. PENGELUARAN</p>
 
-    <div class="title">
-        LAPORAN PERTANGGUNGJAWABAN (LPJ)<br>
-        KEGIATAN {{ strtoupper($kegiatan->Nama_Kegiatan) }}
-    </div>
-
-    <table>
+    <table class="pengeluaran">
         <thead>
             <tr>
-                <th class="header-row">No</th>
-                <th class="header-row">Jenis Pengeluaran</th>
-                <th class="header-row">Keterangan</th>
-                <th class="header-row">Qty</th>
-                <th class="header-row">Satuan</th>
-                <th class="header-row">Harga/Unit (@)</th>
-                <th class="header-row">Total</th>
-                <th class="header-row">Total Kwitansi</th>
+                @foreach ($lebarKolom as $lebar)
+                    <td style="width: {{ $lebar }}%"></td>
+                @endforeach
             </tr>
         </thead>
         <tbody>
-            @php $no = 1; $grandTotal = 0; @endphp
-            @foreach($sies as $sie)
-                @php
-                    $itemsByBon = $sie->item_lpj->groupBy('ID_Bon');
-                    $itemsWithoutBon = $sie->items->whereNull('ID_Bon');
+            <tr class="baris kepala">
+                <td>No</td>
+                <td>Jenis Pengeluaran</td>
+                <td>Keterangan</td>
+                <td>Qty</td>
+                <td>Satuan</td>
+                <td>Harga/Unit (@)</td>
+                <td>Total</td>
+                <td>Total Kwitansi</td>
+            </tr>
 
-                    // +1 untuk baris Sub Total, biar rowspan No & Jenis Pengeluaran ikut nutupin baris itu
-                    $totalBaris = $sie->item_lpj->count() + $itemsWithoutBon->count() + 1;
-                    $first = true;
-                    $subtotalSie = 0;
+            @foreach ($laporan['sies'] as $sie)
+                @php
+                    $barisSie = $sie['jumlah_item'] + 1; // + baris SUBTOTAL
+                    $r = 0;
                 @endphp
 
-                {{-- BAGIAN A: SUDAH ADA BON, pakai data realisasi --}}
-                @foreach($itemsByBon as $bonId => $items)
-                    @php
-                        $firstInBon = true;
-                        $totalKwitansi = $items->sum('Total_Realisasi');
-                    @endphp
+                @foreach ($sie['kwitansi'] as $kwitansi)
+                    @php $barisKwitansi = count($kwitansi['items']); @endphp
 
-                    @foreach($items as $item)
-                        @php $subtotalSie += $item->Total_Realisasi; @endphp
-                        <tr>
-                            @if($first)
-                                <td rowspan="{{ $totalBaris }}" class="text-center group-cell">{{ $no++ }}</td>
-                                <td rowspan="{{ $totalBaris }}" class="group-cell">{{ $sie->Nama_Sie }}</td>
-                            @endif
-
-                            <td>{{ $item->Keterangan }}</td>
-                            <td class="text-center">{{ $item->Qty_Realisasi }}</td>
-                            <td class="text-center">{{ $item->Satuan_Realisasi }}</td>
-                            <td class="text-right">Rp.{{ number_format($item->Harga_Realisasi,0,',','.') }}</td>
-                            <td class="text-right">Rp.{{ number_format($item->Total_Realisasi,0,',','.') }}</td>
-
-                            @if($firstInBon)
-                                <td rowspan="{{ count($items) }}" class="text-right font-bold">
-                                    Rp.{{ number_format($totalKwitansi,0,',','.') }}
-                                </td>
-                            @endif
+                    @foreach ($kwitansi['items'] as $k => $item)
+                        <tr @class(['baris', 'tahan' => $labelGenap($r, $barisSie) || $labelGenap($k, $barisKwitansi)])>
+                            <td class="grup {{ $kelasGrup($r, $barisSie) }}">
+                                <span>{{ $barisLabel($r, $barisSie) ? $sie['no'] : '' }}</span>
+                            </td>
+                            <td class="grup {{ $kelasGrup($r, $barisSie) }}">
+                                <span>{{ $barisLabel($r, $barisSie) ? $sie['nama'] : '' }}</span>
+                            </td>
+                            <td>{{ $item['keterangan'] }}</td>
+                            <td>{{ $item['qty'] }}</td>
+                            <td>{{ $item['satuan'] }}</td>
+                            <td>{{ LaporanDana::rupiah($item['harga']) }}</td>
+                            <td>{{ LaporanDana::rupiah($item['total']) }}</td>
+                            <td class="{{ $kelasGrup($k, $barisKwitansi) }}">
+                                <span>{{ $barisLabel($k, $barisKwitansi) ? LaporanDana::rupiah($kwitansi['total']) : '' }}</span>
+                            </td>
                         </tr>
-                        @php $first = false; $firstInBon = false; @endphp
+                        @php $r++; @endphp
                     @endforeach
                 @endforeach
 
-                {{-- BAGIAN B: BELUM ADA BON, fallback ke data RAB (Item) asli --}}
-                @foreach($itemsWithoutBon as $item)
-                    @php $subtotalSie += $item->Total; @endphp
-                    <tr>
-                        @if($first)
-                            <td rowspan="{{ $totalBaris }}" class="text-center group-cell">{{ $no++ }}</td>
-                            <td rowspan="{{ $totalBaris }}" class="group-cell">{{ $sie->Nama_Sie }}</td>
-                        @endif
-
-                        <td>{{ $item->Keterangan }}</td>
-                        <td class="text-center">{{ $item->Qty }}</td>
-                        <td class="text-center">{{ $item->Satuan }}</td>
-                        <td class="text-right">Rp.{{ number_format($item->Harga_Unit,0,',','.') }}</td>
-                        <td class="text-right">Rp.{{ number_format($item->Total,0,',','.') }}</td>
-                        <td class="text-right">Rp.{{ number_format($item->Total,0,',','.') }}</td>
-                    </tr>
-                    @php $first = false; @endphp
-                @endforeach
-
-                {{-- SUB TOTAL PER SIE --}}
-                <tr>
-                    <th colspan="5" class="text-right subtotal-row">Sub Total</th>
-                    <th class="text-right subtotal-row">{{ number_format($subtotalSie,0,',','.') }}</th>
+                <tr @class(['baris', 'subtotal', 'tahan' => $labelGenap($r, $barisSie)])>
+                    <td class="grup {{ $kelasGrup($r, $barisSie) }}">
+                        <span>{{ $barisLabel($r, $barisSie) ? $sie['no'] : '' }}</span>
+                    </td>
+                    <td class="grup {{ $kelasGrup($r, $barisSie) }}">
+                        <span>{{ $barisLabel($r, $barisSie) ? $sie['nama'] : '' }}</span>
+                    </td>
+                    <td colspan="5">SUBTOTAL</td>
+                    <td>{{ LaporanDana::rupiah($sie['subtotal']) }}</td>
                 </tr>
-                @php $grandTotal += $subtotalSie; @endphp
             @endforeach
-        </tbody>
-        <tfoot>
-            <tr>
-                <th colspan="7" class="text-right subtotal-row">Total Realisasi Dana Kegiatan</th>
-                <th class="text-right subtotal-row">{{ number_format($grandTotal,0,',','.') }}</th>
+
+            <tr class="baris total">
+                <td colspan="7">TOTAL REALISASI DANA KEGIATAN</td>
+                <td>{{ LaporanDana::rupiah($laporan['grandTotal']) }}</td>
             </tr>
-        </tfoot>
+        </tbody>
     </table>
 
-    <div class="ttd-container">
-        <div class="ttd-box">
-            Mengetahui,<br>Ketua Panitia<br><br><br><br>
-            <strong>( .................................... )</strong>
-        </div>
-        <div class="ttd-box" style="float: right;">
-            <br>Bendahara<br><br><br><br>
-            <strong>( .................................... )</strong>
-        </div>
-        <div style="clear: both;"></div>
-    </div>
-
+    <p class="terbilang"><strong>Terbilang:</strong> <strong><em>{{ $laporan['terbilang'] }}.</em></strong></p>
 </body>
 </html>

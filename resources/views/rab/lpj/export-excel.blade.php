@@ -1,110 +1,85 @@
 @php
-    // Palet warna diambil dari screenshot referensi (header biru + baris grup/subtotal biru muda)
-    $borderColor = '#4285F4';
-    $lightBlue = '#CFE2F3';
+    use App\Helpers\LaporanDana;
 
-    $thStyle = "background-color:{$borderColor};color:#FFFFFF;font-weight:bold;text-align:center;vertical-align:middle;border:1px solid {$borderColor};padding:8px;";
-    $groupStyle = "background-color:{$lightBlue};text-align:center;vertical-align:middle;border:1px solid {$borderColor};padding:8px;";
-    $cellStyle = "border:1px solid {$borderColor};padding:6px 8px;";
-    $cellCenterStyle = "border:1px solid {$borderColor};padding:6px 8px;text-align:center;";
-    $cellRightStyle = "border:1px solid {$borderColor};padding:6px 8px;text-align:right;";
-    $subtotalStyle = "background-color:{$lightBlue};font-weight:bold;border:1px solid {$borderColor};padding:6px 8px;";
-    $subtotalRightStyle = "background-color:{$lightBlue};font-weight:bold;border:1px solid {$borderColor};padding:6px 8px;text-align:right;";
+    // Format mengikuti tabel "B. Pengeluaran" di dokumen Laporan Dana (ungu tua / ungu muda).
+    $ungu = '#6A1B9A';
+    $unguMuda = '#E3D4F7';
+
+    $sel = 'font-size:10;text-align:center;vertical-align:middle;word-wrap:break-word;border:1px solid #000000;';
+    $kepala = $sel . "background-color:{$ungu};color:#FFFFFF;font-weight:bold;";
+    $grup = $sel . "background-color:{$unguMuda};";
+    $subtotal = $grup . 'font-weight:bold;';
+    $total = $kepala;
+
+    // Sel gabungan (Terbilang) tidak ikut auto-fit tinggi baris di Excel, jadi tingginya dihitung kasar.
+    $tinggiTerbilang = 16 * max(1, (int) ceil(mb_strlen($laporan['terbilang']) / 70));
 @endphp
 <table>
-    <thead>
-        <tr>
-            <th colspan="8"
-                style="text-align:center;font-size:16px;background-color:{{ $borderColor }};color:#FFFFFF;border:1px solid {{ $borderColor }};padding:10px;">
-                <strong>LAPORAN PERTANGGUNGJAWABAN (LPJ)</strong><br>
-                <strong>{{ strtoupper($kegiatan->Nama_Kegiatan) }}</strong>
-            </th>
-        </tr>
-        <tr></tr>
-        <tr>
-            <th style="{{ $thStyle }}">No</th>
-            <th style="{{ $thStyle }}">Jenis Pengeluaran</th>
-            <th style="{{ $thStyle }}">Keterangan</th>
-            <th style="{{ $thStyle }}">Qty</th>
-            <th style="{{ $thStyle }}">Satuan</th>
-            <th style="{{ $thStyle }}">Harga/Unit (@)</th>
-            <th style="{{ $thStyle }}">Total</th>
-            <th style="{{ $thStyle }}">Total Kwitansi</th>
-        </tr>
-    </thead>
-    <tbody>
-        @php $no = 1; $grandTotal = 0; @endphp
-        @foreach ($sies as $sie)
-            @php
-                $itemsByBon = $sie->item_lpj->groupBy('ID_Bon');
-                $itemsWithoutBon = $sie->items->whereNull('ID_Bon');
+    <tr>
+        <td colspan="8" style="font-size:12;font-weight:bold;">XII. LAPORAN DANA</td>
+    </tr>
+    <tr>
+        <td colspan="8" style="font-size:12;font-weight:bold;text-indent:2;">B. PENGELUARAN</td>
+    </tr>
+    <tr></tr>
+    <tr>
+        <td style="{{ $kepala }}">No</td>
+        <td style="{{ $kepala }}">Jenis Pengeluaran</td>
+        <td style="{{ $kepala }}">Keterangan</td>
+        <td style="{{ $kepala }}">Qty</td>
+        <td style="{{ $kepala }}">Satuan</td>
+        <td style="{{ $kepala }}">Harga/Unit (@)</td>
+        <td style="{{ $kepala }}">Total</td>
+        <td style="{{ $kepala }}">Total Kwitansi</td>
+    </tr>
 
-                // +1 untuk baris Sub Total, biar rowspan No & Jenis Pengeluaran ikut nutupin baris itu
-                $totalBaris = $sie->item_lpj->count() + $itemsWithoutBon->count() + 1;
-                $first = true;
-                $subtotalSie = 0;
-            @endphp
+    @foreach ($laporan['sies'] as $sie)
+        @php
+            $barisSie = $sie['jumlah_item'] + 1; // + baris SUBTOTAL
+            $selSieSudah = false;
+        @endphp
 
-            {{-- BAGIAN A: SUDAH ADA BON, pakai data realisasi --}}
-            @foreach ($itemsByBon as $bonId => $items)
-                @php
-                    $firstInBon = true;
-                    $totalKwitansi = $items->sum('Total_Realisasi');
-                @endphp
+        @foreach ($sie['kwitansi'] as $kwitansi)
+            @php $barisKwitansi = count($kwitansi['items']); @endphp
 
-                @foreach ($items as $item)
-                    @php $subtotalSie += $item->Total_Realisasi; @endphp
-                    <tr>
-                        @if ($first)
-                            <td rowspan="{{ $totalBaris }}" style="{{ $groupStyle }}">{{ $no++ }}</td>
-                            <td rowspan="{{ $totalBaris }}" style="{{ $groupStyle }}">{{ $sie->Nama_Sie }}</td>
-                        @endif
-
-                        <td style="{{ $cellStyle }}">{{ $item->Keterangan }}</td>
-                        <td style="{{ $cellCenterStyle }}">{{ $item->Qty_Realisasi }}</td>
-                        <td style="{{ $cellCenterStyle }}">{{ $item->Satuan_Realisasi }}</td>
-                        <td style="{{ $cellRightStyle }}">Rp.{{ $item->Harga_Realisasi }}</td>
-                        <td style="{{ $cellRightStyle }}">Rp.{{ $item->Total_Realisasi }}</td>
-
-                        @if ($firstInBon)
-                            <td rowspan="{{ count($items) }}" style="{{ $cellRightStyle }}">Rp.{{ $totalKwitansi }}</td>
-                        @endif
-                    </tr>
-                    @php $first = false; $firstInBon = false; @endphp
-                @endforeach
-            @endforeach
-
-            {{-- BAGIAN B: BELUM ADA BON, fallback ke data RAB (Item) asli --}}
-            @foreach ($itemsWithoutBon as $item)
-                @php $subtotalSie += $item->Total; @endphp
+            @foreach ($kwitansi['items'] as $k => $item)
                 <tr>
-                    @if ($first)
-                        <td rowspan="{{ $totalBaris }}" style="{{ $groupStyle }}">{{ $no++ }}</td>
-                        <td rowspan="{{ $totalBaris }}" style="{{ $groupStyle }}">{{ $sie->Nama_Sie }}</td>
+                    @unless ($selSieSudah)
+                        <td style="{{ $grup }}" @if ($barisSie > 1) rowspan="{{ $barisSie }}" @endif>{{ $sie['no'] }}</td>
+                        <td style="{{ $grup }}" @if ($barisSie > 1) rowspan="{{ $barisSie }}" @endif>{{ $sie['nama'] }}</td>
+                        @php $selSieSudah = true; @endphp
+                    @endunless
+
+                    <td style="{{ $sel }}">{{ $item['keterangan'] }}</td>
+                    <td style="{{ $sel }}">{{ $item['qty'] }}</td>
+                    <td style="{{ $sel }}">{{ $item['satuan'] }}</td>
+                    <td style="{{ $sel }}">{{ LaporanDana::rupiah($item['harga']) }}</td>
+                    <td style="{{ $sel }}">{{ LaporanDana::rupiah($item['total']) }}</td>
+
+                    @if ($k === 0)
+                        <td style="{{ $sel }}" @if ($barisKwitansi > 1) rowspan="{{ $barisKwitansi }}" @endif>{{ LaporanDana::rupiah($kwitansi['total']) }}</td>
                     @endif
-
-                    <td style="{{ $cellStyle }}">{{ $item->Keterangan }}</td>
-                    <td style="{{ $cellCenterStyle }}">{{ $item->Qty }}</td>
-                    <td style="{{ $cellCenterStyle }}">{{ $item->Satuan }}</td>
-                    <td style="{{ $cellRightStyle }}">Rp.{{ $item->Harga_Unit }}</td>
-                    <td style="{{ $cellRightStyle }}">Rp.{{ $item->Total }}</td>
-                    <td style="{{ $cellRightStyle }}">Rp.{{ $item->Total }}</td>
                 </tr>
-                @php $first = false; @endphp
             @endforeach
-
-            {{-- SUB TOTAL PER SIE --}}
-            <tr>
-                <th colspan="5" style="{{ $subtotalRightStyle }}">Sub Total</th>
-                <th style="{{ $subtotalRightStyle }}">Rp.{{ $subtotalSie }}</th>
-            </tr>
-            @php $grandTotal += $subtotalSie; @endphp
         @endforeach
-    </tbody>
-    <tfoot>
+
         <tr>
-            <th colspan="7" style="{{ $subtotalRightStyle }}">Total Realisasi Dana Kegiatan</th>
-            <th style="{{ $subtotalRightStyle }}">Rp.{{ $grandTotal }}</th>
+            @unless ($selSieSudah)
+                <td style="{{ $grup }}">{{ $sie['no'] }}</td>
+                <td style="{{ $grup }}">{{ $sie['nama'] }}</td>
+            @endunless
+            <td colspan="5" style="{{ $subtotal }}">SUBTOTAL</td>
+            <td style="{{ $subtotal }}">{{ LaporanDana::rupiah($sie['subtotal']) }}</td>
         </tr>
-    </tfoot>
+    @endforeach
+
+    <tr>
+        <td colspan="7" style="{{ $total }}">TOTAL REALISASI DANA KEGIATAN</td>
+        <td style="{{ $total }}">{{ LaporanDana::rupiah($laporan['grandTotal']) }}</td>
+    </tr>
+    <tr></tr>
+    <tr>
+        <td colspan="2" style="font-size:12;font-weight:bold;vertical-align:top;height:{{ $tinggiTerbilang }}pt;">Terbilang:</td>
+        <td colspan="6" style="font-size:12;font-weight:bold;font-style:italic;vertical-align:top;word-wrap:break-word;">{{ $laporan['terbilang'] }}.</td>
+    </tr>
 </table>
