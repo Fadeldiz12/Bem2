@@ -12,13 +12,16 @@
         ($labelGenap($i, $n) ? 'label-genap' : '')
     );
 
-    $lebarKolom = [4.4, 17.4, 15.2, 6.3, 10.2, 14.8, 15.2, 16.5];
+    // Data & tata letak dari App\Helpers\LaporanDana::pengeluaran() (LPJ) / anggaran() (Proposal)
+    $lebarKolom = $laporan['lebarKolom'];
+    $jumlahKolom = count($lebarKolom);
+    $kolomKwitansi = $laporan['kolomKwitansi'];
 @endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Dana - {{ $kegiatan->Nama_Kegiatan }}</title>
+    <title>{{ $kegiatan->Nama_Kegiatan }}</title>
     <style>
         @page { margin: 2.5cm 2.5cm 2.5cm 3cm; }
         body { margin: 0; font-family: "Times New Roman", Times, serif; font-size: 9pt; color: #000; }
@@ -26,7 +29,10 @@
         .judul { margin: 0 0 8pt 0; font-size: 12pt; font-weight: bold; }
         .subjudul { margin: 0 0 9pt 21pt; font-size: 12pt; font-weight: bold; }
 
-        table.pengeluaran { width: 390pt; margin-left: 36pt; border-collapse: collapse; table-layout: fixed; }
+        table.pengeluaran {
+            width: 390pt; margin-left: {{ $laporan['indentTabel'] }}pt;
+            border-collapse: collapse; table-layout: fixed;
+        }
         .pengeluaran td {
             border: 0.75pt solid #000; padding: 1.5pt 2pt; height: 16pt;
             text-align: center; vertical-align: middle; line-height: 1.1;
@@ -51,12 +57,16 @@
         .pengeluaran tr.tahan { page-break-before: avoid; }
         .subtotal td.grup { font-weight: normal; }
 
-        .terbilang { margin: 14pt 0 0 21pt; font-size: 12pt; line-height: 1.5; text-align: justify; }
+        .terbilang {
+            margin: 14pt 0 0 {{ $laporan['indentTerbilang'] }}pt;
+            font-size: 12pt; line-height: 1.5; text-align: justify;
+        }
     </style>
 </head>
 <body>
-    <p class="judul">XII. LAPORAN DANA</p>
-    <p class="subjudul">B. PENGELUARAN</p>
+    @foreach ($laporan['judul'] as $i => $judul)
+        <p class="{{ $i === 0 ? 'judul' : 'subjudul' }}">{{ $judul }}</p>
+    @endforeach
 
     <table class="pengeluaran">
         <thead>
@@ -75,7 +85,9 @@
                 <td>Satuan</td>
                 <td>Harga/Unit (@)</td>
                 <td>Total</td>
-                <td>Total Kwitansi</td>
+                @if ($kolomKwitansi)
+                    <td>Total Kwitansi</td>
+                @endif
             </tr>
 
             @foreach ($laporan['sies'] as $sie)
@@ -88,7 +100,7 @@
                     @php $barisKwitansi = count($kwitansi['items']); @endphp
 
                     @foreach ($kwitansi['items'] as $k => $item)
-                        <tr @class(['baris', 'tahan' => $labelGenap($r, $barisSie) || $labelGenap($k, $barisKwitansi)])>
+                        <tr @class(['baris', 'tahan' => $labelGenap($r, $barisSie) || ($kolomKwitansi && $labelGenap($k, $barisKwitansi))])>
                             <td class="grup {{ $kelasGrup($r, $barisSie) }}">
                                 <span>{{ $barisLabel($r, $barisSie) ? $sie['no'] : '' }}</span>
                             </td>
@@ -100,9 +112,11 @@
                             <td>{{ $item['satuan'] }}</td>
                             <td>{{ LaporanDana::rupiah($item['harga']) }}</td>
                             <td>{{ LaporanDana::rupiah($item['total']) }}</td>
-                            <td class="{{ $kelasGrup($k, $barisKwitansi) }}">
-                                <span>{{ $barisLabel($k, $barisKwitansi) ? LaporanDana::rupiah($kwitansi['total']) : '' }}</span>
-                            </td>
+                            @if ($kolomKwitansi)
+                                <td class="{{ $kelasGrup($k, $barisKwitansi) }}">
+                                    <span>{{ $barisLabel($k, $barisKwitansi) ? LaporanDana::rupiah($kwitansi['total']) : '' }}</span>
+                                </td>
+                            @endif
                         </tr>
                         @php $r++; @endphp
                     @endforeach
@@ -115,13 +129,13 @@
                     <td class="grup {{ $kelasGrup($r, $barisSie) }}">
                         <span>{{ $barisLabel($r, $barisSie) ? $sie['nama'] : '' }}</span>
                     </td>
-                    <td colspan="5">SUBTOTAL</td>
+                    <td colspan="{{ $jumlahKolom - 3 }}">SUBTOTAL</td>
                     <td>{{ LaporanDana::rupiah($sie['subtotal']) }}</td>
                 </tr>
             @endforeach
 
             <tr class="baris total">
-                <td colspan="7">TOTAL REALISASI DANA KEGIATAN</td>
+                <td colspan="{{ $jumlahKolom - 1 }}">{{ $laporan['labelTotal'] }}</td>
                 <td>{{ LaporanDana::rupiah($laporan['grandTotal']) }}</td>
             </tr>
         </tbody>

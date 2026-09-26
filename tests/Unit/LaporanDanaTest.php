@@ -37,6 +37,41 @@ class LaporanDanaTest extends TestCase
         $this->assertSame([2, 'K3', 0, [], 0], [$k3['no'], $k3['nama'], $k3['jumlah_item'], $k3['kwitansi'], $k3['subtotal']]);
         $this->assertSame(465000.0, $laporan['grandTotal']);
         $this->assertSame('Empat Ratus Enam Puluh Lima Ribu Rupiah', $laporan['terbilang']);
+
+        $this->assertSame(['XII. LAPORAN DANA', 'B. PENGELUARAN'], $laporan['judul']);
+        $this->assertTrue($laporan['kolomKwitansi']);
+        $this->assertSame('TOTAL REALISASI DANA KEGIATAN', $laporan['labelTotal']);
+        $this->assertCount(8, $laporan['lebarKolom']);
+        $this->assertEqualsWithDelta(100, array_sum($laporan['lebarKolom']), 0.001);
+    }
+
+    public function test_anggaran_proposal_langsung_tabel_tanpa_kolom_kwitansi(): void
+    {
+        $konsumsi = $this->sie('Konsumsi', [
+            $this->realisasi('Nasi', 9, 15000, bon: 1), // realisasi LPJ tidak ikut di proposal
+        ], [
+            $this->itemProposal('Nasi', 10, 15000, bon: 1),
+            $this->itemProposal('Air Mineral', 5, 40000, bon: null),
+        ]);
+        $kosong = $this->sie('Sie Kosong', [], []);
+
+        $laporan = LaporanDana::anggaran((new Kegiatan())->setRelation('sie', collect([$konsumsi, $kosong])));
+
+        [$sie, $sieKosong] = $laporan['sies'];
+        $this->assertSame(
+            [[350000.0, ['Nasi', 'Air Mineral']]],
+            array_map(fn ($k) => [$k['total'], array_column($k['items'], 'keterangan')], $sie['kwitansi'])
+        );
+        $this->assertSame([350000.0, 2], [$sie['subtotal'], $sie['jumlah_item']]);
+        $this->assertSame([[], 0, 0], [$sieKosong['kwitansi'], $sieKosong['subtotal'], $sieKosong['jumlah_item']]);
+        $this->assertSame(350000.0, $laporan['grandTotal']);
+        $this->assertSame('Tiga Ratus Lima Puluh Ribu Rupiah', $laporan['terbilang']);
+
+        $this->assertSame([], $laporan['judul']);
+        $this->assertFalse($laporan['kolomKwitansi']);
+        $this->assertSame('TOTAL ANGGARAN DANA KEGIATAN', $laporan['labelTotal']);
+        $this->assertCount(7, $laporan['lebarKolom']);
+        $this->assertEqualsWithDelta(100, array_sum($laporan['lebarKolom']), 0.001);
     }
 
     private function sie(string $nama, array $realisasi, array $proposal): Sie

@@ -13,15 +13,20 @@
 
     // Sel gabungan (Terbilang) tidak ikut auto-fit tinggi baris di Excel, jadi tingginya dihitung kasar.
     $tinggiTerbilang = 16 * max(1, (int) ceil(mb_strlen($laporan['terbilang']) / 70));
+
+    // Data & tata letak dari App\Helpers\LaporanDana::pengeluaran() (LPJ) / anggaran() (Proposal)
+    $jumlahKolom = count($laporan['lebarKolom']);
+    $kolomKwitansi = $laporan['kolomKwitansi'];
 @endphp
 <table>
-    <tr>
-        <td colspan="8" style="font-size:12;font-weight:bold;">XII. LAPORAN DANA</td>
-    </tr>
-    <tr>
-        <td colspan="8" style="font-size:12;font-weight:bold;text-indent:2;">B. PENGELUARAN</td>
-    </tr>
-    <tr></tr>
+    @foreach ($laporan['judul'] as $i => $judul)
+        <tr>
+            <td colspan="{{ $jumlahKolom }}" style="font-size:12;font-weight:bold;{{ $i > 0 ? 'text-indent:2;' : '' }}">{{ $judul }}</td>
+        </tr>
+    @endforeach
+    @if ($laporan['judul'])
+        <tr></tr>
+    @endif
     <tr>
         <td style="{{ $kepala }}">No</td>
         <td style="{{ $kepala }}">Jenis Pengeluaran</td>
@@ -30,7 +35,9 @@
         <td style="{{ $kepala }}">Satuan</td>
         <td style="{{ $kepala }}">Harga/Unit (@)</td>
         <td style="{{ $kepala }}">Total</td>
-        <td style="{{ $kepala }}">Total Kwitansi</td>
+        @if ($kolomKwitansi)
+            <td style="{{ $kepala }}">Total Kwitansi</td>
+        @endif
     </tr>
 
     @foreach ($laporan['sies'] as $sie)
@@ -56,7 +63,7 @@
                     <td style="{{ $sel }}">{{ LaporanDana::rupiah($item['harga']) }}</td>
                     <td style="{{ $sel }}">{{ LaporanDana::rupiah($item['total']) }}</td>
 
-                    @if ($k === 0)
+                    @if ($kolomKwitansi && $k === 0)
                         <td style="{{ $sel }}" @if ($barisKwitansi > 1) rowspan="{{ $barisKwitansi }}" @endif>{{ LaporanDana::rupiah($kwitansi['total']) }}</td>
                     @endif
                 </tr>
@@ -68,18 +75,18 @@
                 <td style="{{ $grup }}">{{ $sie['no'] }}</td>
                 <td style="{{ $grup }}">{{ $sie['nama'] }}</td>
             @endunless
-            <td colspan="5" style="{{ $subtotal }}">SUBTOTAL</td>
+            <td colspan="{{ $jumlahKolom - 3 }}" style="{{ $subtotal }}">SUBTOTAL</td>
             <td style="{{ $subtotal }}">{{ LaporanDana::rupiah($sie['subtotal']) }}</td>
         </tr>
     @endforeach
 
     <tr>
-        <td colspan="7" style="{{ $total }}">TOTAL REALISASI DANA KEGIATAN</td>
+        <td colspan="{{ $jumlahKolom - 1 }}" style="{{ $total }}">{{ $laporan['labelTotal'] }}</td>
         <td style="{{ $total }}">{{ LaporanDana::rupiah($laporan['grandTotal']) }}</td>
     </tr>
     <tr></tr>
     <tr>
         <td colspan="2" style="font-size:12;font-weight:bold;vertical-align:top;height:{{ $tinggiTerbilang }}pt;">Terbilang:</td>
-        <td colspan="6" style="font-size:12;font-weight:bold;font-style:italic;vertical-align:top;word-wrap:break-word;">{{ $laporan['terbilang'] }}.</td>
+        <td colspan="{{ $jumlahKolom - 2 }}" style="font-size:12;font-weight:bold;font-style:italic;vertical-align:top;word-wrap:break-word;">{{ $laporan['terbilang'] }}.</td>
     </tr>
 </table>
