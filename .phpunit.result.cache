@@ -1,0 +1,1 @@
+{"version":2,"defects":{"Tests\\Feature\\RateLimiterTest::test_public_rate_limiter_is_registered":8},"times":{"Tests\\Feature\\RateLimiterTest::test_public_rate_limiter_is_registered":0.024}}
